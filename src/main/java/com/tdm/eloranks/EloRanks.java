@@ -7,6 +7,7 @@ import com.tdm.eloranks.commands.LeaderboardCommand;
 import com.tdm.eloranks.listeners.PlayerDeathListener;
 import com.tdm.eloranks.manager.EloManager;
 import com.tdm.eloranks.manager.DuelManager;
+import com.tdm.eloranks.manager.WorldManager;
 import com.tdm.eloranks.config.ConfigManager;
 
 /**
@@ -21,6 +22,7 @@ public final class EloRanks extends JavaPlugin {
     private ConfigManager configManager;
     private EloManager eloManager;
     private DuelManager duelManager;
+    private WorldManager worldManager;
 
     @Override
     public void onEnable() {
@@ -28,6 +30,7 @@ public final class EloRanks extends JavaPlugin {
 
         // Initialize managers
         configManager = new ConfigManager(this);
+        worldManager = new WorldManager(this);
         eloManager = new EloManager(this);
         duelManager = new DuelManager(this);
 
@@ -67,5 +70,9 @@ public final class EloRanks extends JavaPlugin {
 
     public DuelManager getDuelManager() {
         return duelManager;
+    }
+
+    public WorldManager getWorldManager() {
+        return worldManager;
     }
 }

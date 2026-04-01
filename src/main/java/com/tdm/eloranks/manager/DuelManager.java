@@ -6,6 +6,8 @@ import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,56 +30,11 @@ public class DuelManager {
     // Stored inventories for when duel ends
     private final Map<UUID, ItemStack[]> playerInventories = new ConcurrentHashMap<>();
     private final Map<UUID, ItemStack[]> playerArmor = new ConcurrentHashMap<>();
-    private final Map<UUID, Map<Integer, ItemStack>> playerExtraItems = new ConcurrentHashMap<>();
-    
-    // Arena locations
-    private Location arenaSpawn1;
-    private Location arenaSpawn2;
 
     public DuelManager(EloRanks plugin) {
         this.plugin = plugin;
         this.configManager = plugin.getConfigManager();
         this.eloManager = plugin.getEloManager();
-        
-        loadArenas();
-    }
-
-    private void loadArenas() {
-        // Load arena locations from config
-        if (configManager.getConfig().contains("arena.spawn1")) {
-            arenaSpawn1 = configManager.getConfig().getLocation("arena.spawn1");
-        }
-        if (configManager.getConfig().contains("arena.spawn2")) {
-            arenaSpawn2 = configManager.getConfig().getLocation("arena.spawn2");
-        }
-    }
-
-    public void saveArenas() {
-        if (arenaSpawn1 != null) {
-            configManager.getConfig().set("arena.spawn1", arenaSpawn1);
-        }
-        if (arenaSpawn2 != null) {
-            configManager.getConfig().set("arena.spawn2", arenaSpawn2);
-        }
-        configManager.saveConfig();
-    }
-
-    public void setArenaSpawn1(Location loc) {
-        this.arenaSpawn1 = loc;
-        saveArenas();
-    }
-
-    public void setArenaSpawn2(Location loc) {
-        this.arenaSpawn2 = loc;
-        saveArenas();
-    }
-
-    public Location getArenaSpawn1() {
-        return arenaSpawn1;
-    }
-
-    public Location getArenaSpawn2() {
-        return arenaSpawn2;
     }
 
     /**
@@ -158,38 +115,36 @@ public class DuelManager {
      * Start a duel between two players.
      */
     public void startDuel(Player player1, Player player2) {
-        if (arenaSpawn1 == null || arenaSpawn2 == null) {
+        // Get arena spawn locations
+        var spawn1Opt = plugin.getWorldManager().getArenaSpawnLocation(1);
+        var spawn2Opt = plugin.getWorldManager().getArenaSpawnLocation(2);
+        
+        if (spawn1Opt.isEmpty() || spawn2Opt.isEmpty()) {
             player1.sendMessage(ChatColor.RED + "Arena not configured! Contact an admin.");
             player2.sendMessage(ChatColor.RED + "Arena not configured! Contact an admin.");
             return;
         }
         
+        Location spawn1 = spawn1Opt.get();
+        Location spawn2 = spawn2Opt.get();
+        
         // Save inventories
         savePlayerInventory(player1);
         savePlayerInventory(player2);
         
-        // Apply kit
-        applyDuelKit(player1);
-        applyDuelKit(player2);
+        // Apply UHC kit
+        applyUHCKit(player1);
+        applyUHCKit(player2);
         
         // Teleport to arena
-        player1.teleport(arenaSpawn1);
-        player2.teleport(arenaSpawn2);
+        player1.teleport(spawn1);
+        player2.teleport(spawn2);
         
-        // Set as active duel
-        activeDuels.put(player1.getUniqueId(), player2.getUniqueId());
-        activeDuels.put(player2.getUniqueId(), player1.getUniqueId());
+        // Apply potion effects after teleport
+        applyPotionEffects(player1);
+        applyPotionEffects(player2);
         
-        // Notify players
-        player1.sendMessage(ChatColor.GOLD + "═══ Duel Started! ═══");
-        player1.sendMessage(ChatColor.YELLOW + "vs " + player2.getName());
-        player1.sendMessage(ChatColor.GRAY + "Fight!");
-        
-        player2.sendMessage(ChatColor.GOLD + "═══ Duel Started! ═══");
-        player2.sendMessage(ChatColor.YELLOW + "vs " + player1.getName());
-        player2.sendMessage(ChatColor.GRAY + "Fight!");
-        
-        // Clear their health
+        // Clear health and food after teleporting
         player1.setHealth(player1.getMaxHealth());
         player2.setHealth(player2.getMaxHealth());
         player1.setFoodLevel(20);
@@ -210,30 +165,88 @@ public class DuelManager {
         }
     }
 
-    private void applyDuelKit(Player player) {
+    /**
+     * Apply UHC-style PvP kit to a player.
+     */
+    private void applyUHCKit(Player player) {
         player.getInventory().clear();
+        player.getInventory().setHeldItemSlot(0);
         
-        // Give diamond sword
+        ConfigManager kit = configManager;
+        
+        // Diamond Sword
         ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
-        ItemMeta meta = sword.getItemMeta();
-        meta.setUnbreakable(true);
-        sword.setItemMeta(meta);
+        ItemMeta swordMeta = sword.getItemMeta();
+        swordMeta.setUnbreakable(true);
+        sword.setItemMeta(swordMeta);
         player.getInventory().setItem(0, sword);
         
-        // Give armor
-        ItemStack helmet = new ItemStack(Material.DIAMOND_HELMET);
-        ItemStack chestplate = new ItemStack(Material.DIAMOND_CHESTPLATE);
-        ItemStack leggings = new ItemStack(Material.DIAMOND_LEGGINGS);
-        ItemStack boots = new ItemStack(Material.DIAMOND_BOOTS);
+        // Bow
+        ItemStack bow = new ItemStack(Material.BOW);
+        ItemMeta bowMeta = bow.getItemMeta();
+        bowMeta.setUnbreakable(true);
+        bow.setItemMeta(bowMeta);
+        player.getInventory().setItem(1, bow);
         
-        player.getInventory().setHelmet(helmet);
-        player.getInventory().setChestplate(chestplate);
-        player.getInventory().setLeggings(leggings);
-        player.getInventory().setBoots(boots);
+        // Arrows (64)
+        player.getInventory().setItem(2, new ItemStack(Material.ARROW, kit.getArrows()));
         
-        // Give food
-        ItemStack food = new ItemStack(Material.COOKED_BEEF, 64);
-        player.getInventory().setItem(8, food);
+        // Golden Apples (10)
+        String[] foodParts = kit.getFood().split(":");
+        int foodAmount = foodParts.length > 1 ? Integer.parseInt(foodParts[1]) : 10;
+        player.getInventory().setItem(8, new ItemStack(Material.GOLDEN_APPLE, foodAmount));
+        
+        // Armor
+        player.getInventory().setHelmet(createUnbreakable(Material.valueOf(kit.getHelmet())));
+        player.getInventory().setChestplate(createUnbreakable(Material.valueOf(kit.getChestplate())));
+        player.getInventory().setLeggings(createUnbreakable(Material.valueOf(kit.getLeggings())));
+        player.getInventory().setBoots(createUnbreakable(Material.valueOf(kit.getBoots())));
+        
+        // Shield in offhand
+        ItemStack shield = new ItemStack(Material.SHIELD);
+        ItemMeta shieldMeta = shield.getItemMeta();
+        shieldMeta.setUnbreakable(true);
+        shield.setItemMeta(shieldMeta);
+        player.getInventory().setItem(9, shield);
+        
+        // Cobwebs (16)
+        player.getInventory().setItem(3, new ItemStack(Material.COBWEB, 16));
+        
+        // Oak Planks (64)
+        player.getInventory().setItem(4, new ItemStack(Material.OAK_PLANKS, 64));
+        
+        // Water Bucket
+        player.getInventory().setItem(5, new ItemStack(Material.WATER_BUCKET));
+        
+        // Lava Bucket
+        player.getInventory().setItem(6, new ItemStack(Material.LAVA_BUCKET));
+        
+        // Speed II potions (2)
+        player.getInventory().addItem(createPotion(PotionEffectType.SPEED, 2, 180));
+        player.getInventory().addItem(createPotion(PotionEffectType.SPEED, 2, 180));
+        
+        // Strength II potions (2)
+        player.getInventory().addItem(createPotion(PotionEffectType.STRENGTH, 2, 180));
+        player.getInventory().addItem(createPotion(PotionEffectType.STRENGTH, 2, 180));
+    }
+
+    private ItemStack createUnbreakable(Material material) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setUnbreakable(true);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private void applyPotionEffects(Player player) {
+        // Clear existing effects first
+        player.clearActivePotionEffects();
+        
+        // Apply Speed II for 3 minutes (180 ticks)
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 180, 1, true, false));
+        
+        // Apply Strength II for 3 minutes (180 ticks)
+        player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 180, 1, true, false));
     }
 
     /**
@@ -247,20 +260,30 @@ public class DuelManager {
         EloManager.EloChangeResult result = eloManager.applyDuelResult(winnerUuid, loserUuid);
         
         if (result != null) {
+            // Get new ranks
+            int winnerRank = eloManager.getPlayerRank(winnerUuid);
+            int loserRank = eloManager.getPlayerRank(loserUuid);
+            
             if (winner != null && winner.isOnline()) {
                 restorePlayerInventory(winner);
-                winner.sendMessage(ChatColor.GREEN + "You won! +" + result.winnerChange + " Elo!");
+                // Clear potion effects
+                winner.clearActivePotionEffects();
                 
-                int rank = eloManager.getPlayerRank(winnerUuid);
-                winner.sendMessage(ChatColor.YELLOW + "Your new rank: #" + rank);
+                // Send messages
+                String eloMsg = configManager.getConfig().getString("messages.elo-gain", "&a+%elo% Elo! &7(Rank: #%rank%)");
+                eloMsg = eloMsg.replace("%elo%", String.valueOf(result.winnerChange)).replace("%rank%", String.valueOf(winnerRank));
+                winner.sendMessage(eloMsg);
             }
             
             if (loser != null && loser.isOnline()) {
                 restorePlayerInventory(loser);
-                loser.sendMessage(ChatColor.RED + "You lost! " + result.loserChange + " Elo!");
+                // Clear potion effects
+                loser.clearActivePotionEffects();
                 
-                int rank = eloManager.getPlayerRank(loserUuid);
-                loser.sendMessage(ChatColor.YELLOW + "Your new rank: #" + rank);
+                // Send messages
+                String eloMsg = configManager.getConfig().getString("messages.elo-lost", "&c%elo% Elo! &7(Rank: #%rank%)");
+                eloMsg = eloMsg.replace("%elo%", String.valueOf(result.loserChange)).replace("%rank%", String.valueOf(loserRank));
+                loser.sendMessage(eloMsg);
             }
         }
         

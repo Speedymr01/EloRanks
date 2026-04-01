@@ -86,15 +86,23 @@ public class ConfigManager {
         config.set("duel.request-timeout", 30); // seconds
         config.set("duel.arena-world", "duel_arena");
         
-        // ============ KIT SETTINGS ============
+        // ============ KIT SETTINGS (UHC Style) ============
         config.set("kit.sword", "DIAMOND_SWORD");
-        config.set("kit.armor", "DIAMOND_CHESTPLATE,DIAMOND_LEGGINGS,DIAMOND_BOOTS");
-        config.set("kit.food", "COOKED_BEEF:64");
-        config.set("kit.potions", "SPEED:2,STRENGTH:1");
+        config.set("kit.bow", "BOW");
+        config.set("kit.arrows", 64);
+        config.set("kit.helmet", "DIAMOND_HELMET");
+        config.set("kit.chestplate", "DIAMOND_CHESTPLATE");
+        config.set("kit.leggings", "DIAMOND_LEGGINGS");
+        config.set("kit.boots", "DIAMOND_BOOTS");
+        config.set("kit.offhand", "SHIELD");
+        config.set("kit.food", "GOLDEN_APPLE:10");
+        config.set("kit.blocks", "COBWEB:16,OAK_PLANKS:64");
+        config.set("kit.buckets", "WATER_BUCKET,LAVA_BUCKET");
+        config.set("kit.potions", "SPEED:2,STRENGTH:2");
         
         // ============ MESSAGES ============
-        config.set("messages.elo-gain", "&a+%elo% Elo! &7(Match: %match_elo%)");
-        config.set("messages.elo-lost", "&c-%elo% Elo! &7(Match: %match_elo%)");
+        config.set("messages.elo-gain", "&a+%elo% Elo! &7(Rank: #%rank%)");
+        config.set("messages.elo-lost", "&c%elo% Elo! &7(Rank: #%rank%)");
         config.set("messages.new-rank", "&6&l★ &aYou are now Rank %rank%! ★");
         config.set("messages.leaderboard-header", "&7=== &eTop Players &7===");
     }
@@ -256,5 +264,58 @@ public class ConfigManager {
 
     public int getRequestTimeout() {
         return config.getInt("duel.request-timeout", 30);
+    }
+
+    public String getArenaWorld() {
+        return config.getString("duel.arena-world", "duel_arena");
+    }
+
+    // ============ KIT GETTERS ============
+    public String getSword() {
+        return config.getString("kit.sword", "DIAMOND_SWORD");
+    }
+
+    public String getBow() {
+        return config.getString("kit.bow", "BOW");
+    }
+
+    public int getArrows() {
+        return config.getInt("kit.arrows", 64);
+    }
+
+    public String getHelmet() {
+        return config.getString("kit.helmet", "DIAMOND_HELMET");
+    }
+
+    public String getChestplate() {
+        return config.getString("kit.chestplate", "DIAMOND_CHESTPLATE");
+    }
+
+    public String getLeggings() {
+        return config.getString("kit.leggings", "DIAMOND_LEGGINGS");
+    }
+
+    public String getBoots() {
+        return config.getString("kit.boots", "DIAMOND_BOOTS");
+    }
+
+    public String getOffhand() {
+        return config.getString("kit.offhand", "SHIELD");
+    }
+
+    public String getFood() {
+        return config.getString("kit.food", "GOLDEN_APPLE:10");
+    }
+
+    public String getBlocks() {
+        return config.getString("kit.blocks", "COBWEB:16,OAK_PLANKS:64");
+    }
+
+    public String getBuckets() {
+        return config.getString("kit.buckets", "WATER_BUCKET,LAVA_BUCKET");
+    }
+
+    public String getPotions() {
+        return config.getString("kit.potions", "SPEED:2,STRENGTH:2");
     }
 }
