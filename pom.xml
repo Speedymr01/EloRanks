@@ -6,21 +6,18 @@
 
     <groupId>com.tdm</groupId>
 
-    <!-- Dynamically set artifactId from GitHub repo name -->
-    <artifactId>${repo.name}</artifactId>
+    <!-- Hardcoded artifactId per project -->
+    <artifactId>EloRanks</artifactId>
 
-    <!-- Version now adapts to the GitHub tag -->
+    <!-- Version adapts to GitHub tag -->
     <version>${revision}</version>
 
     <packaging>jar</packaging>
 
     <properties>
-        <!-- Extract repo name from GITHUB_REPOSITORY (owner/repo) -->
-        <repo.name>${env.GITHUB_REPOSITORY}</repo.name>
-        <repo.name>${repo.name.substring(repo.name.indexOf('/') + 1)}</repo.name>
-
-        <!-- Pull version from GitHub tag name -->
+        <!-- Pull version from GitHub tag name (e.g., v1.0.0 -> 1.0.0) -->
         <revision>${env.GITHUB_REF_NAME}</revision>
+        <revision>${revision.startsWith('v') ? revision.substring(1) : revision}</revision>
 
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
