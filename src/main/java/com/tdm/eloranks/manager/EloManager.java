@@ -31,7 +31,9 @@ public class EloManager {
     public EloManager(EloRanks plugin) {
         this.plugin = plugin;
         this.configManager = plugin.getConfigManager();
+        plugin.getLogger().info("Loading Elo data from disk...");
         loadData();
+        plugin.getLogger().info("Loaded " + playerCache.size() + " player records");
     }
 
     private void loadData() {
@@ -39,6 +41,7 @@ public class EloManager {
         dataFile = new File(plugin.getDataFolder(), "elo_data.yml");
         
         if (!dataFile.exists()) {
+            plugin.getLogger().info("No existing data file, creating new one...");
             try {
                 dataFile.createNewFile();
             } catch (IOException e) {
@@ -47,6 +50,7 @@ public class EloManager {
         }
         
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        plugin.getLogger().info("Loading players from config...");
         loadPlayers();
     }
 
@@ -84,6 +88,8 @@ public class EloManager {
     }
 
     public void saveAll() {
+        plugin.getLogger().info("Saving " + playerCache.size() + " player records to disk...");
+        
         // Clear and rebuild config
         dataConfig.set("players", null);
         
@@ -99,6 +105,7 @@ public class EloManager {
         
         try {
             dataConfig.save(dataFile);
+            plugin.getLogger().info("Data saved successfully!");
             plugin.getLogger().info("Saved Elo data for " + playerCache.size() + " players");
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save elo_data.yml: " + e.getMessage());
@@ -221,6 +228,58 @@ public class EloManager {
 
     public int getTotalPlayers() {
         return playerCache.size();
+    }
+
+    /**
+     * Reset all player statistics.
+     */
+    public void resetAllStats() {
+        playerCache.clear();
+        leaderboard.clear();
+        saveAll();
+    }
+
+    /**
+     * Reset a specific player's stats by UUID.
+     */
+    public void resetPlayerStats(UUID uuid) {
+        playerCache.remove(uuid);
+        leaderboard.removeIf(pd -> pd.getPlayerId().equals(uuid));
+    }
+
+    /**
+     * Reset a specific player's stats by name.
+     */
+    public void resetPlayerStatsByName(String playerName) {
+        playerCache.entrySet().removeIf(entry -> 
+            entry.getValue().getPlayerName().equalsIgnoreCase(playerName));
+        leaderboard.removeIf(pd -> pd.getPlayerName().equalsIgnoreCase(playerName));
+    }
+
+    /**
+     * Set a player's Elo by UUID.
+     */
+    public void setPlayerElo(UUID uuid, int elo) {
+        PlayerData pd = playerCache.get(uuid);
+        if (pd != null) {
+            pd.setElo(elo);
+            updateRanks();
+            saveAll();
+        }
+    }
+
+    /**
+     * Set a player's Elo by name.
+     */
+    public void setPlayerEloByName(String playerName, int elo) {
+        for (PlayerData pd : playerCache.values()) {
+            if (pd.getPlayerName().equalsIgnoreCase(playerName)) {
+                pd.setElo(elo);
+                updateRanks();
+                saveAll();
+                return;
+            }
+        }
     }
 
     /**

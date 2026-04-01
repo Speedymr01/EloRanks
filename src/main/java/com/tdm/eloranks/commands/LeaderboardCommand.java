@@ -7,14 +7,16 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Command handler for /leaderboard command.
  */
-public class LeaderboardCommand implements CommandExecutor {
+public class LeaderboardCommand implements CommandExecutor, TabCompleter {
 
     private final EloRanks plugin;
     
@@ -52,9 +54,9 @@ public class LeaderboardCommand implements CommandExecutor {
         List<PlayerData> leaderboard = eloManager.getLeaderboard();
         
         sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "     🏆 EloRanks Leaderboard  " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        sender.sendMessage(ACCENT + "║" + PRIMARY + "   🏆 EloRanks Leaderboard   " + ACCENT + "║");
+        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         sender.sendMessage("");
         sender.sendMessage(MUTED + "   📖 Page " + INFO + page + MUTED + " of " + INFO + totalPages + MUTED + " | Total: " + INFO + totalPlayers + MUTED + " players");
         sender.sendMessage("");
@@ -106,5 +108,24 @@ public class LeaderboardCommand implements CommandExecutor {
             case 3: return "🥉 #3";
             default: return "   #" + rank;
         }
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            String current = args[0].toLowerCase();
+            List<String> matches = new java.util.ArrayList<>();
+            
+            // Add page numbers
+            for (int i = 1; i <= 10; i++) {
+                if (String.valueOf(i).startsWith(current)) {
+                    matches.add(String.valueOf(i));
+                }
+            }
+            
+            return matches;
+        }
+        
+        return List.of();
     }
 }

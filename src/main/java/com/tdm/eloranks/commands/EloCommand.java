@@ -3,18 +3,22 @@ package com.tdm.eloranks.commands;
 import com.tdm.eloranks.EloRanks;
 import com.tdm.eloranks.data.PlayerData;
 import com.tdm.eloranks.manager.EloManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Command handler for /elo and /elostats commands.
+ * Command handler for /er command.
  */
-public class EloCommand implements CommandExecutor {
+public class EloCommand implements CommandExecutor, TabCompleter {
 
     private final EloRanks plugin;
     
@@ -75,9 +79,9 @@ public class EloCommand implements CommandExecutor {
         PlayerData pd = eloManager.getOrCreatePlayerData(player.getUniqueId(), player.getName());
         
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔══════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "     Your Elo Statistics     " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚══════════════════════════════╝");
+        player.sendMessage(ACCENT + "╔═══════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "   Your Elo Statistics   " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚═══════════════════════════════╝");
         player.sendMessage("");
         player.sendMessage(INFO + "  🏆 Rank: " + ACCENT + "#" + pd.getRank() + MUTED + " / " + eloManager.getTotalPlayers());
         player.sendMessage(INFO + "  ⚡ Elo: " + ACCENT + pd.getElo());
@@ -106,9 +110,9 @@ public class EloCommand implements CommandExecutor {
         }
         
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "   " + target.getName() + "'s Statistics    " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + " " + target.getName() + "'s Statistics  " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player.sendMessage("");
         player.sendMessage(INFO + "  🏆 Rank: " + ACCENT + "#" + pd.getRank() + MUTED + " / " + eloManager.getTotalPlayers());
         player.sendMessage(INFO + "  ⚡ Elo: " + ACCENT + pd.getElo());
@@ -135,9 +139,9 @@ public class EloCommand implements CommandExecutor {
         List<PlayerData> top = eloManager.getTopPlayers(count);
         
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "      Top " + count + " Players       " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "     Top " + count + " Players    " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player.sendMessage("");
         
         for (int i = 0; i < top.size(); i++) {
@@ -153,14 +157,14 @@ public class EloCommand implements CommandExecutor {
 
     private void showHelp(Player player) {
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "        EloRanks Help        " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "      EloRanks Help     " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player.sendMessage("");
-        player.sendMessage(INFO + "  /elo " + MUTED + "- View your stats");
-        player.sendMessage(INFO + "  /elo stats " + MUTED + "- View your stats");
-        player.sendMessage(INFO + "  /elo <name> " + MUTED + "- View player stats");
-        player.sendMessage(INFO + "  /elo top " + MUTED + "- View top players");
+        player.sendMessage(INFO + "  /er " + MUTED + "- View your stats");
+        player.sendMessage(INFO + "  /er stats " + MUTED + "- View your stats");
+        player.sendMessage(INFO + "  /er <name> " + MUTED + "- View player stats");
+        player.sendMessage(INFO + "  /er top " + MUTED + "- View top players");
         player.sendMessage(INFO + "  /duel <player> " + MUTED + "- Challenge to duel");
         player.sendMessage(INFO + "  /leaderboard " + MUTED + "- Full leaderboard");
         player.sendMessage("");
@@ -188,5 +192,43 @@ public class EloCommand implements CommandExecutor {
         if (winRate >= 70) return SUCCESS;
         if (winRate >= 50) return INFO;
         return DANGER;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!(sender instanceof Player)) {
+            return List.of();
+        }
+
+        List<String> subcommands = List.of("stats", "me", "top", "help");
+
+        if (args.length == 0) {
+            return subcommands;
+        }
+
+        String current = args[args.length - 1].toLowerCase();
+        
+        // Match subcommands
+        List<String> matches = subcommands.stream()
+            .filter(s -> s.toLowerCase().startsWith(current))
+            .collect(Collectors.toList());
+
+        // Add player names for viewing other stats
+        if (args.length == 1) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (p.getName().toLowerCase().startsWith(current)) {
+                    matches.add(p.getName());
+                }
+            }
+        }
+
+        // Add numbers for top command
+        if (args.length == 1 && (args[0].equalsIgnoreCase("top") || current.equals("top"))) {
+            matches.add("10");
+            matches.add("25");
+            matches.add("50");
+        }
+
+        return matches;
     }
 }

@@ -58,35 +58,41 @@ public class ConfigManager {
         config.set("elo.max", 10000);
         
         // ============ K-FACTOR (Base) ============
-        // Default K-factor values
         config.set("elo.k-factor.win", 32);
         config.set("elo.k-factor.draw", 16);
         
         // ============ DYNAMIC K-FACTOR ============
-        // Enable/disable dynamic K-factor
         config.set("elo.k-factor.dynamic.enabled", true);
-        
-        // By games played (helps new players rank up faster)
         config.set("elo.k-factor.dynamic.by-games.enabled", true);
-        config.set("elo.k-factor.dynamic.by-games.threshold", 20);  // After 20 games, use normal K
-        config.set("elo.k-factor.dynamic.by-games.new-player-k", 48);  // K for new players (< 20 games)
-        
-        // By Elo (higher ranks more stable)
+        config.set("elo.k-factor.dynamic.by-games.threshold", 20);
+        config.set("elo.k-factor.dynamic.by-games.new-player-k", 48);
         config.set("elo.k-factor.dynamic.by-elo.enabled", true);
-        config.set("elo.k-factor.dynamic.by-elo.threshold-1", 1500);  // At 1500+, use lower K
-        config.set("elo.k-factor.dynamic.by-elo.threshold-2", 2000);  // At 2000+, use even lower K
+        config.set("elo.k-factor.dynamic.by-elo.threshold-1", 1500);
+        config.set("elo.k-factor.dynamic.by-elo.threshold-2", 2000);
         config.set("elo.k-factor.dynamic.by-elo.k-at-1500", 24);
         config.set("elo.k-factor.dynamic.by-elo.k-at-2000", 16);
         
         // ============ RANK SETTINGS ============
-        config.set("ranks.percentage", true); // Use top X% for rank 1
+        config.set("ranks.percentage", true);
         
         // ============ DUEL SETTINGS ============
-        config.set("duel.cooldown", 60); // seconds
-        config.set("duel.request-timeout", 30); // seconds
+        config.set("duel.cooldown", 60);
+        config.set("duel.request-timeout", 30);
         config.set("duel.arena-world", "duel_arena");
+        config.set("duel.allow spectators", true);
+        config.set("duel.spectator-permission", "er.spectate");
+        config.set("duel.forfeit-enabled", true);
         
-        // ============ KIT SETTINGS (UHC Style) ============
+        // ============ ARENA SETTINGS ============
+        config.set("arena.initial-count", 10);
+        config.set("arena.spacing", 100);
+        config.set("arena.schematic", "cloudy.schematic");
+        config.set("arena.auto-expand", true);
+        config.set("arena.expand-count", 5);
+        config.set("arena.respawn-delay", 3);
+        
+        // ============ KIT SETTINGS ============
+        config.set("kit.enabled", true);
         config.set("kit.sword", "DIAMOND_SWORD");
         config.set("kit.bow", "BOW");
         config.set("kit.arrows", 64);
@@ -100,11 +106,45 @@ public class ConfigManager {
         config.set("kit.buckets", "WATER_BUCKET,LAVA_BUCKET");
         config.set("kit.potions", "SPEED:2,STRENGTH:2");
         
+        // ============ POTION EFFECTS ============
+        config.set("effects.speed", true);
+        config.set("effects.speed-level", 2);
+        config.set("effects.speed-duration", 180);
+        config.set("effects.strength", true);
+        config.set("effects.strength-level", 2);
+        config.set("effects.strength-duration", 180);
+        
+        // ============ WORLD SETTINGS ============
+        config.set("world.void-world", true);
+        config.set("world.spawn-protection", false);
+        config.set("world.pvp-enabled", true);
+        
+        // ============ GAMEPLAY SETTINGS ============
+        config.set("gameplay.fall-damage", false);
+        config.set("gameplay.fire-damage", false);
+        config.set("gameplay.hunger-depletion", false);
+        config.set("gameplay.keep-inventory", true);
+        config.set("gameplay.natural-regeneration", false);
+        
+        // ============ CHAT MESSAGES ============
+        config.set("chat.duel-request", true);
+        config.set("chat.duel-start", true);
+        config.set("chat.duel-end", true);
+        config.set("chat.rank-up", true);
+        
         // ============ MESSAGES ============
         config.set("messages.elo-gain", "&a+%elo% Elo! &7(Rank: #%rank%)");
         config.set("messages.elo-lost", "&c%elo% Elo! &7(Rank: #%rank%)");
         config.set("messages.new-rank", "&6&l★ &aYou are now Rank %rank%! ★");
         config.set("messages.leaderboard-header", "&7=== &eTop Players &7===");
+        
+        // ============ LEADERBOARD SETTINGS ============
+        config.set("leaderboard.entries-per-page", 10);
+        config.set("leaderboard.show-rank-change", true);
+        
+        // ============ DATABASE/SORAGE SETTINGS ============
+        config.set("storage.save-interval", 300); // seconds
+        config.set("storage.async-save", true);
     }
 
     public void saveConfig() {
@@ -317,5 +357,65 @@ public class ConfigManager {
 
     public String getPotions() {
         return config.getString("kit.potions", "SPEED:2,STRENGTH:2");
+    }
+
+    // ============ ARENA GETTERS ============
+    public int getInitialArenaCount() {
+        return config.getInt("arena.initial-count", 10);
+    }
+
+    public int getArenaSpacing() {
+        return config.getInt("arena.spacing", 100);
+    }
+
+    public String getArenaSchematic() {
+        return config.getString("arena.schematic", "cloudy.schematic");
+    }
+
+    public boolean isAutoExpandEnabled() {
+        return config.getBoolean("arena.auto-expand", true);
+    }
+
+    public int getArenaExpandCount() {
+        return config.getInt("arena.expand-count", 5);
+    }
+
+    // ============ GAMEPLAY GETTERS ============
+    public boolean isFallDamageEnabled() {
+        return config.getBoolean("gameplay.fall-damage", false);
+    }
+
+    public boolean isFireDamageEnabled() {
+        return config.getBoolean("gameplay.fire-damage", false);
+    }
+
+    public boolean isHungerDepletionEnabled() {
+        return config.getBoolean("gameplay.hunger-depletion", false);
+    }
+
+    public boolean isKeepInventoryEnabled() {
+        return config.getBoolean("gameplay.keep-inventory", true);
+    }
+
+    public boolean isNaturalRegenerationEnabled() {
+        return config.getBoolean("gameplay.natural-regeneration", false);
+    }
+
+    // ============ CHAT GETTERS ============
+    public boolean isDuelRequestChatEnabled() {
+        return config.getBoolean("chat.duel-request", true);
+    }
+
+    public boolean isDuelStartChatEnabled() {
+        return config.getBoolean("chat.duel-start", true);
+    }
+
+    public boolean isDuelEndChatEnabled() {
+        return config.getBoolean("chat.duel-end", true);
+    }
+
+    // ============ LEADERBOARD GETTERS ============
+    public int getLeaderboardEntriesPerPage() {
+        return config.getInt("leaderboard.entries-per-page", 10);
     }
 }

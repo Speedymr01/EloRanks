@@ -38,6 +38,8 @@ public class DuelManager {
     // Stored inventories for when duel ends
     private final Map<UUID, ItemStack[]> playerInventories = new ConcurrentHashMap<>();
     private final Map<UUID, ItemStack[]> playerArmor = new ConcurrentHashMap<>();
+    // Stored locations for when duel ends
+    private final Map<UUID, Location> playerLocations = new ConcurrentHashMap<>();
 
     public DuelManager(EloRanks plugin) {
         this.plugin = plugin;
@@ -128,18 +130,31 @@ public class DuelManager {
      * Start a duel between two players.
      */
     public void startDuel(Player player1, Player player2) {
-        // Get arena spawn locations
-        var spawn1Opt = plugin.getWorldManager().getArenaSpawnLocation(1);
-        var spawn2Opt = plugin.getWorldManager().getArenaSpawnLocation(2);
+        plugin.getLogger().info("=== DUEL START ===");
+        plugin.getLogger().info("Player 1: " + player1.getName() + " | Player 2: " + player2.getName());
         
-        if (spawn1Opt.isEmpty() || spawn2Opt.isEmpty()) {
-            player1.sendMessage(DANGER + "✖ " + MUTED + "Arena not configured! Contact an admin.");
-            player2.sendMessage(DANGER + "✖ " + MUTED + "Arena not configured! Contact an admin.");
+        // Get available arena
+        var arenaOpt = plugin.getArenaManager().getAvailableArena();
+        
+        if (arenaOpt.isEmpty()) {
+            plugin.getLogger().warning("No available arenas for duel!");
+            player1.sendMessage(DANGER + "✖ " + MUTED + "No arenas available! Try again later.");
+            player2.sendMessage(DANGER + "✖ " + MUTED + "No arenas available! Try again later.");
             return;
         }
         
-        Location spawn1 = spawn1Opt.get();
-        Location spawn2 = spawn2Opt.get();
+        var arena = arenaOpt.get();
+        plugin.getLogger().info("Using Arena #" + arena.getId() + " at offset X: " + arena.getOffsetX());
+        
+        // Get arena spawn locations
+        Location spawn1 = arena.getSpawn1();
+        Location spawn2 = arena.getSpawn2();
+        
+        if (spawn1 == null || spawn2 == null) {
+            player1.sendMessage(DANGER + "✖ " + MUTED + "Arena spawn points not configured! Contact an admin.");
+            player2.sendMessage(DANGER + "✖ " + MUTED + "Arena spawn points not configured! Contact an admin.");
+            return;
+        }
         
         // Save inventories
         savePlayerInventory(player1);
@@ -163,33 +178,49 @@ public class DuelManager {
         player1.setFoodLevel(20);
         player2.setFoodLevel(20);
         
-        // Set as active duel
+        // Mark arena as in use
+        plugin.getArenaManager().occupyArena(arena.getId(), player1);
+        plugin.getArenaManager().occupyArena(arena.getId(), player2);
+        
+        // Set as active duel (with arena info)
         activeDuels.put(player1.getUniqueId(), player2.getUniqueId());
         activeDuels.put(player2.getUniqueId(), player1.getUniqueId());
         
         // Notify players
         player1.sendMessage("");
-        player1.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        player1.sendMessage(ACCENT + "║" + SUCCESS + "      ⚔️ DUEL STARTED! ⚔️     " + ACCENT + "║");
-        player1.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player1.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        player1.sendMessage(ACCENT + "║" + SUCCESS + "    ⚔️ DUEL STARTED! ⚔️    " + ACCENT + "║");
+        player1.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player1.sendMessage("");
         player1.sendMessage(INFO + "  🎯 vs " + ACCENT + player2.getName());
+        player1.sendMessage(INFO + "  🏟️  Arena: " + arena.getId());
         player1.sendMessage(PRIMARY + "  ⚔️  FIGHT!");
         player1.sendMessage("");
         
         player2.sendMessage("");
-        player2.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        player2.sendMessage(ACCENT + "║" + SUCCESS + "      ⚔️ DUEL STARTED! ⚔️     " + ACCENT + "║");
-        player2.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player2.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        player2.sendMessage(ACCENT + "║" + SUCCESS + "    ⚔️ DUEL STARTED! ⚔️    " + ACCENT + "║");
+        player2.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player2.sendMessage("");
         player2.sendMessage(INFO + "  🎯 vs " + ACCENT + player1.getName());
+        player2.sendMessage(INFO + "  🏟️  Arena: " + arena.getId());
         player2.sendMessage(PRIMARY + "  ⚔️  FIGHT!");
         player2.sendMessage("");
     }
 
     private void savePlayerInventory(Player player) {
+        // Save inventory and armor
         playerInventories.put(player.getUniqueId(), player.getInventory().getContents().clone());
         playerArmor.put(player.getUniqueId(), player.getInventory().getArmorContents().clone());
+        
+        // Save location (create a copy to avoid reference issues)
+        playerLocations.put(player.getUniqueId(), player.getLocation().clone());
+        
+        plugin.getLogger().info("Saved player " + player.getName() + " location: " + 
+            player.getLocation().getWorld().getName() + " at (" + 
+            player.getLocation().getX() + ", " + 
+            player.getLocation().getY() + ", " + 
+            player.getLocation().getZ() + ")");
     }
 
     public void restorePlayerInventory(Player player) {
@@ -198,6 +229,27 @@ public class DuelManager {
         }
         if (playerArmor.containsKey(player.getUniqueId())) {
             player.getInventory().setArmorContents(playerArmor.remove(player.getUniqueId()));
+        }
+        
+        // Restore location
+        if (playerLocations.containsKey(player.getUniqueId())) {
+            Location savedLoc = playerLocations.remove(player.getUniqueId());
+            World world = Bukkit.getWorld(savedLoc.getWorld().getName());
+            if (world != null) {
+                // Create location with the saved world
+                Location restoreLoc = new Location(world, savedLoc.getX(), savedLoc.getY(), savedLoc.getZ(), 
+                    savedLoc.getYaw(), savedLoc.getPitch());
+                player.teleport(restoreLoc);
+                plugin.getLogger().info("Restored player " + player.getName() + " to: " + 
+                    restoreLoc.getWorld().getName() + " at (" + 
+                    (int)restoreLoc.getX() + ", " + 
+                    (int)restoreLoc.getY() + ", " + 
+                    (int)restoreLoc.getZ() + ")");
+            } else {
+                // World doesn't exist, send to spawn
+                player.teleport(Bukkit.getWorld("world").getSpawnLocation());
+                plugin.getLogger().warning("Could not restore world for " + player.getName() + ", sent to spawn");
+            }
         }
     }
 
@@ -267,6 +319,12 @@ public class DuelManager {
         Player winner = Bukkit.getPlayer(winnerUuid);
         Player loser = Bukkit.getPlayer(loserUuid);
         
+        plugin.getLogger().info("=== DUEL END ===");
+        plugin.getLogger().info("Winner: " + (winner != null ? winner.getName() : winnerUuid) + " (+" + 
+            (eloManager.getPlayerData(winnerUuid) != null ? eloManager.getPlayerData(winnerUuid).getElo() : "?") + " Elo)");
+        plugin.getLogger().info("Loser: " + (loser != null ? loser.getName() : loserUuid) + " (-" + 
+            (eloManager.getPlayerData(loserUuid) != null ? eloManager.getPlayerData(loserUuid).getElo() : "?") + " Elo)");
+        
         // Apply Elo changes
         EloManager.EloChangeResult result = eloManager.applyDuelResult(winnerUuid, loserUuid);
         
@@ -280,9 +338,9 @@ public class DuelManager {
                 
                 // Win message
                 winner.sendMessage("");
-                winner.sendMessage(SUCCESS + "╔══════════════════════════════════╗");
-                winner.sendMessage(SUCCESS + "║" + ACCENT + "         🎉 YOU WON! 🎉        " + SUCCESS + "║");
-                winner.sendMessage(SUCCESS + "╚══════════════════════════════════╝");
+                winner.sendMessage(SUCCESS + "╔═════════════════════════════════╗");
+                winner.sendMessage(SUCCESS + "║" + ACCENT + "       🎉 YOU WON! 🎉       " + SUCCESS + "║");
+                winner.sendMessage(SUCCESS + "╚═════════════════════════════════╝");
                 winner.sendMessage("");
                 winner.sendMessage(INFO + "  ⚡ +" + result.winnerChange + " Elo");
                 winner.sendMessage(INFO + "  🏆 Rank: #" + winnerRank + " / " + eloManager.getTotalPlayers());
@@ -295,14 +353,30 @@ public class DuelManager {
                 
                 // Loss message
                 loser.sendMessage("");
-                loser.sendMessage(DANGER + "╔══════════════════════════════════╗");
-                loser.sendMessage(DANGER + "║" + MUTED + "         💀 YOU LOST 💀        " + DANGER + "║");
-                loser.sendMessage(DANGER + "╚══════════════════════════════════╝");
+                loser.sendMessage(DANGER + "╔═════════════════════════════════╗");
+                loser.sendMessage(DANGER + "║" + MUTED + "       💀 YOU LOST 💀       " + DANGER + "║");
+                loser.sendMessage(DANGER + "╚═════════════════════════════════╝");
                 loser.sendMessage("");
                 loser.sendMessage(MUTED + "  ⚡ " + result.loserChange + " Elo");
                 loser.sendMessage(INFO + "  🏆 Rank: #" + loserRank + " / " + eloManager.getTotalPlayers());
                 loser.sendMessage("");
             }
+        }
+        
+        // Free the arena (if we can find it)
+        if (winner != null) {
+            var arena = plugin.getArenaManager().getPlayerArena(winner);
+            if (arena != null) {
+                plugin.getArenaManager().freeArena(arena.getId());
+            }
+        }
+        
+        // Remove players from arena tracking
+        if (winner != null) {
+            plugin.getArenaManager().removePlayer(winner);
+        }
+        if (loser != null) {
+            plugin.getArenaManager().removePlayer(loser);
         }
         
         // Clear active duel
@@ -312,6 +386,18 @@ public class DuelManager {
 
     public boolean hasActiveDuel(UUID uuid) {
         return activeDuels.containsKey(uuid);
+    }
+
+    /**
+     * Cancel a duel without a winner (e.g., when admin ends it).
+     */
+    public void cancelDuel(UUID playerUuid) {
+        // Remove from active duels
+        activeDuels.remove(playerUuid);
+        // Clean up saved data (in case it wasn't cleaned up)
+        playerInventories.remove(playerUuid);
+        playerArmor.remove(playerUuid);
+        playerLocations.remove(playerUuid);
     }
 
     public UUID getDuelOpponent(UUID uuid) {

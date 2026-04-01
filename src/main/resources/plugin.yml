@@ -1,41 +1,45 @@
 name: EloRanks
-version: 1.0.0
+version: 1.0.1
 main: com.tdm.eloranks.EloRanks
 api-version: 1.21
 author: TDM
 description: Competitive 1v1 Elo-Based Ranking System for Minecraft servers
 
 commands:
-  elo:
+  er:
     description: View your Elo stats
     usage: /<command> [stats|top|help] [player]
-    aliases: [elostats]
+    aliases: [elo, elostats, erstats]
   duel:
     description: Challenge players to 1v1 duels
     usage: /<command> <player> | accept <player> | decline <player>
   leaderboard:
     description: View the global Elo leaderboard
     usage: /<command> [page]
+  eradmin:
+    description: Admin commands for EloRanks
+    usage: /<command> <subcommand> [args]
+    aliases: [eloranksadmin]
 
 permissions:
-  eloranks.duel:
+  er.duel:
     description: Allow dueling other players
     default: true
-  eloranks.duel.request:
+  er.duel.request:
     description: Allow sending duel requests
     default: true
-  eloranks.duel.accept:
+  er.duel.accept:
     description: Allow accepting duel requests
     default: true
-  eloranks.stats.view:
+  er.stats.view:
     description: Allow viewing stats
     default: true
-  eloranks.stats.view.others:
+  er.stats.view.others:
     description: Allow viewing other players' stats
     default: op
-  eloranks.leaderboard:
+  er.leaderboard:
     description: Allow viewing the leaderboard
     default: true
-  eloranks.admin:
+  er.admin:
     description: Admin permissions for EloRanks
     default: op

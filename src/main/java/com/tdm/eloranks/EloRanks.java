@@ -4,10 +4,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import com.tdm.eloranks.commands.EloCommand;
 import com.tdm.eloranks.commands.DuelCommand;
 import com.tdm.eloranks.commands.LeaderboardCommand;
+import com.tdm.eloranks.commands.AdminCommand;
 import com.tdm.eloranks.listeners.PlayerDeathListener;
+import com.tdm.eloranks.listeners.BlockBreakListener;
 import com.tdm.eloranks.manager.EloManager;
 import com.tdm.eloranks.manager.DuelManager;
-import com.tdm.eloranks.manager.WorldManager;
+import com.tdm.eloranks.manager.ArenaManager;
 import com.tdm.eloranks.config.ConfigManager;
 
 /**
@@ -22,38 +24,70 @@ public final class EloRanks extends JavaPlugin {
     private ConfigManager configManager;
     private EloManager eloManager;
     private DuelManager duelManager;
-    private WorldManager worldManager;
+    private ArenaManager arenaManager;
 
     @Override
     public void onEnable() {
         instance = this;
-
+        
+        getLogger().info("╔══════════════════════════════════════╗");
+        getLogger().info("║       EloRanks Loading...              ║");
+        getLogger().info("╚══════════════════════════════════════╝");
+        
         // Initialize managers
+        getLogger().info("[1/5] Loading config...");
         configManager = new ConfigManager(this);
-        worldManager = new WorldManager(this);
+        
+        getLogger().info("[2/5] Loading Elo data...");
         eloManager = new EloManager(this);
+        
+        getLogger().info("[3/5] Loading DuelManager...");
         duelManager = new DuelManager(this);
+        
+        getLogger().info("[4/5] Loading ArenaManager (FAWE)...");
+        arenaManager = new ArenaManager(
+            this, 
+            configManager.getArenaSchematic(), 
+            configManager.getInitialArenaCount(), 
+            configManager.getArenaSpacing()
+        );
 
+        getLogger().info("[5/5] Registering commands & listeners...");
+        
         // Register commands
-        getCommand("elo").setExecutor(new EloCommand(this));
+        getCommand("er").setExecutor(new EloCommand(this));
+        getCommand("er").setTabCompleter(new EloCommand(this));
         getCommand("duel").setExecutor(new DuelCommand(this));
+        getCommand("duel").setTabCompleter(new DuelCommand(this));
         getCommand("leaderboard").setExecutor(new LeaderboardCommand(this));
-        getCommand("elostats").setExecutor(new EloCommand(this));
+        getCommand("leaderboard").setTabCompleter(new LeaderboardCommand(this));
+        getCommand("eradmin").setExecutor(new AdminCommand(this));
+        getCommand("eradmin").setTabCompleter(new AdminCommand(this));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), this);
+        getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
 
-        getLogger().info("EloRanks has been enabled!");
+        getLogger().info("╔══════════════════════════════════════╗");
+        getLogger().info("║  ✅ EloRanks Enabled Successfully!  ║");
+        getLogger().info("║  Version: " + getDescription().getVersion() + "                    ║");
+        getLogger().info("║  Author: " + getDescription().getAuthors() + "                     ║");
+        getLogger().info("╚══════════════════════════════════════╝");
     }
 
     @Override
     public void onDisable() {
+        getLogger().info("═══════════════════════════════════════");
+        getLogger().info("  EloRanks Shutting Down...");
+        
         // Save all data
         if (eloManager != null) {
+            getLogger().info("  Saving player data...");
             eloManager.saveAll();
         }
         
-        getLogger().info("EloRanks has been disabled!");
+        getLogger().info("  ✅ Shutdown complete!");
+        getLogger().info("═══════════════════════════════════════");
     }
 
     public static EloRanks getInstance() {
@@ -72,7 +106,7 @@ public final class EloRanks extends JavaPlugin {
         return duelManager;
     }
 
-    public WorldManager getWorldManager() {
-        return worldManager;
+    public ArenaManager getArenaManager() {
+        return arenaManager;
     }
 }

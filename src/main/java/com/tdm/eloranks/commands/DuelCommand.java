@@ -1,16 +1,21 @@
 package com.tdm.eloranks.commands;
 
 import com.tdm.eloranks.EloRanks;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Command handler for /duel command.
  */
-public class DuelCommand implements CommandExecutor {
+public class DuelCommand implements CommandExecutor, TabCompleter {
 
     private final EloRanks plugin;
     
@@ -117,13 +122,54 @@ public class DuelCommand implements CommandExecutor {
 
     private void showHelp(Player player) {
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "        Duel Commands       " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "      Duel Commands      " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player.sendMessage("");
         player.sendMessage(INFO + "  ⚔️  /duel <player> " + MUTED + "- Challenge to 1v1");
         player.sendMessage(INFO + "  ✅ /duel accept <player> " + MUTED + "- Accept challenge");
         player.sendMessage(INFO + "  ❌ /duel decline <player> " + MUTED + "- Decline challenge");
         player.sendMessage("");
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!(sender instanceof Player)) {
+            return List.of();
+        }
+
+        List<String> subcommands = List.of("request", "challenge", "send", "accept", "decline", "help");
+
+        if (args.length == 0) {
+            return subcommands;
+        }
+
+        String current = args[args.length - 1].toLowerCase();
+        
+        // Match subcommands
+        List<String> matches = subcommands.stream()
+            .filter(s -> s.toLowerCase().startsWith(current))
+            .collect(Collectors.toList());
+
+        // Add player names
+        if (args.length == 1) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (p.getName().toLowerCase().startsWith(current)) {
+                    matches.add(p.getName());
+                }
+            }
+        } else if (args.length == 2) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("request") || sub.equals("challenge") || sub.equals("send") ||
+                sub.equals("accept") || sub.equals("decline")) {
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (p.getName().toLowerCase().startsWith(current)) {
+                        matches.add(p.getName());
+                    }
+                }
+            }
+        }
+
+        return matches;
     }
 }
