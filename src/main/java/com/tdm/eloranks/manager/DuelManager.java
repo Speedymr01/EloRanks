@@ -89,7 +89,7 @@ public class DuelManager {
             return false;
         }
         
-        if (hasActiveDuel(requester) || hasActiveDuel(target)) {
+        if (hasActiveDuel(requester.getUniqueId()) || hasActiveDuel(target.getUniqueId())) {
             requester.sendMessage(ChatColor.RED + "One of the players is already in a duel!");
             return false;
         }
