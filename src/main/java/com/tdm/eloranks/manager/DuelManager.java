@@ -21,6 +21,14 @@ public class DuelManager {
     private final ConfigManager configManager;
     private final EloManager eloManager;
     
+    // Color scheme
+    private final ChatColor PRIMARY = ChatColor.AQUA;
+    private final ChatColor ACCENT = ChatColor.GOLD;
+    private final ChatColor SUCCESS = ChatColor.GREEN;
+    private final ChatColor DANGER = ChatColor.RED;
+    private final ChatColor INFO = ChatColor.YELLOW;
+    private final ChatColor MUTED = ChatColor.GRAY;
+    
     // Active duel requests (requester -> target)
     private final Map<UUID, UUID> duelRequests = new ConcurrentHashMap<>();
     
@@ -42,30 +50,35 @@ public class DuelManager {
      */
     public boolean sendDuelRequest(Player requester, Player target) {
         if (requester.equals(target)) {
-            requester.sendMessage(ChatColor.RED + "You cannot duel yourself!");
+            requester.sendMessage(DANGER + "✖ " + MUTED + "You cannot duel yourself!");
             return false;
         }
         
         if (hasActiveDuel(requester.getUniqueId()) || hasActiveDuel(target.getUniqueId())) {
-            requester.sendMessage(ChatColor.RED + "One of the players is already in a duel!");
+            requester.sendMessage(DANGER + "✖ " + MUTED + "One of the players is already in a duel!");
             return false;
         }
         
         // Check cooldown
-        long lastDuel = eloManager.getPlayerData(requester.getUniqueId()).getLastDuelTime();
+        var playerData = eloManager.getPlayerData(requester.getUniqueId());
+        if (playerData == null) {
+            playerData = eloManager.getOrCreatePlayerData(requester.getUniqueId(), requester.getName());
+        }
+        
+        long lastDuel = playerData.getLastDuelTime();
         long cooldown = configManager.getDuelCooldown() * 1000L;
         if (System.currentTimeMillis() - lastDuel < cooldown) {
             long remaining = (cooldown - (System.currentTimeMillis() - lastDuel)) / 1000;
-            requester.sendMessage(ChatColor.RED + "You must wait " + remaining + " seconds before dueling again!");
+            requester.sendMessage(DANGER + "⏳ " + MUTED + "Cooldown: " + remaining + "s remaining");
             return false;
         }
         
         // Send request
         duelRequests.put(requester.getUniqueId(), target.getUniqueId());
         
-        requester.sendMessage(ChatColor.GREEN + "Duel request sent to " + target.getName() + "!");
-        target.sendMessage(ChatColor.YELLOW + requester.getName() + " has challenged you to a duel!");
-        target.sendMessage(ChatColor.GREEN + "/duel accept " + requester.getName() + " to accept");
+        requester.sendMessage(SUCCESS + "✓ " + INFO + "Duel request sent to " + ACCENT + target.getName() + INFO + "!");
+        target.sendMessage(INFO + "⚔️  " + ACCENT + requester.getName() + MUTED + " challenges you to a duel!");
+        target.sendMessage(SUCCESS + "✅ " + MUTED + "Type " + INFO + "/duel accept " + requester.getName() + MUTED + " to fight!");
         
         // Auto-expire after timeout
         final UUID reqUuid = requester.getUniqueId();
@@ -75,7 +88,7 @@ public class DuelManager {
             if (duelRequests.containsKey(reqUuid) && duelRequests.get(reqUuid).equals(tarUuid)) {
                 duelRequests.remove(reqUuid);
                 if (requester.isOnline()) {
-                    requester.sendMessage(ChatColor.GRAY + "Your duel request to " + target.getName() + " has expired.");
+                    requester.sendMessage(MUTED + "⏰ " + "Duel request to " + ACCENT + target.getName() + MUTED + " expired");
                 }
             }
         }, configManager.getRequestTimeout() * 20L);
@@ -90,7 +103,7 @@ public class DuelManager {
         Player requester = Bukkit.getPlayer(requesterName);
         
         if (requester == null) {
-            acceptor.sendMessage(ChatColor.RED + "Player not found!");
+            acceptor.sendMessage(DANGER + "✖ " + MUTED + "Player not found!");
             return false;
         }
         
@@ -98,7 +111,7 @@ public class DuelManager {
         UUID accUuid = acceptor.getUniqueId();
         
         if (!duelRequests.containsKey(reqUuid) || !duelRequests.get(reqUuid).equals(accUuid)) {
-            acceptor.sendMessage(ChatColor.RED + "No pending duel request from that player!");
+            acceptor.sendMessage(DANGER + "✖ " + MUTED + "No pending duel request from that player!");
             return false;
         }
         
@@ -120,8 +133,8 @@ public class DuelManager {
         var spawn2Opt = plugin.getWorldManager().getArenaSpawnLocation(2);
         
         if (spawn1Opt.isEmpty() || spawn2Opt.isEmpty()) {
-            player1.sendMessage(ChatColor.RED + "Arena not configured! Contact an admin.");
-            player2.sendMessage(ChatColor.RED + "Arena not configured! Contact an admin.");
+            player1.sendMessage(DANGER + "✖ " + MUTED + "Arena not configured! Contact an admin.");
+            player2.sendMessage(DANGER + "✖ " + MUTED + "Arena not configured! Contact an admin.");
             return;
         }
         
@@ -144,11 +157,34 @@ public class DuelManager {
         applyPotionEffects(player1);
         applyPotionEffects(player2);
         
-        // Clear health and food after teleporting
+        // Clear health and food
         player1.setHealth(player1.getMaxHealth());
         player2.setHealth(player2.getMaxHealth());
         player1.setFoodLevel(20);
         player2.setFoodLevel(20);
+        
+        // Set as active duel
+        activeDuels.put(player1.getUniqueId(), player2.getUniqueId());
+        activeDuels.put(player2.getUniqueId(), player1.getUniqueId());
+        
+        // Notify players
+        player1.sendMessage("");
+        player1.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        player1.sendMessage(ACCENT + "║" + SUCCESS + "      ⚔️ DUEL STARTED! ⚔️     " + ACCENT + "║");
+        player1.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player1.sendMessage("");
+        player1.sendMessage(INFO + "  🎯 vs " + ACCENT + player2.getName());
+        player1.sendMessage(PRIMARY + "  ⚔️  FIGHT!");
+        player1.sendMessage("");
+        
+        player2.sendMessage("");
+        player2.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        player2.sendMessage(ACCENT + "║" + SUCCESS + "      ⚔️ DUEL STARTED! ⚔️     " + ACCENT + "║");
+        player2.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player2.sendMessage("");
+        player2.sendMessage(INFO + "  🎯 vs " + ACCENT + player1.getName());
+        player2.sendMessage(PRIMARY + "  ⚔️  FIGHT!");
+        player2.sendMessage("");
     }
 
     private void savePlayerInventory(Player player) {
@@ -170,31 +206,20 @@ public class DuelManager {
      */
     private void applyUHCKit(Player player) {
         player.getInventory().clear();
-        player.getInventory().setHeldItemSlot(0);
         
         ConfigManager kit = configManager;
         
         // Diamond Sword
-        ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
-        ItemMeta swordMeta = sword.getItemMeta();
-        swordMeta.setUnbreakable(true);
-        sword.setItemMeta(swordMeta);
-        player.getInventory().setItem(0, sword);
+        player.getInventory().setItem(0, createUnbreakable(Material.DIAMOND_SWORD));
         
         // Bow
-        ItemStack bow = new ItemStack(Material.BOW);
-        ItemMeta bowMeta = bow.getItemMeta();
-        bowMeta.setUnbreakable(true);
-        bow.setItemMeta(bowMeta);
-        player.getInventory().setItem(1, bow);
+        player.getInventory().setItem(1, createUnbreakable(Material.BOW));
         
-        // Arrows (64)
+        // Arrows
         player.getInventory().setItem(2, new ItemStack(Material.ARROW, kit.getArrows()));
         
-        // Golden Apples (10)
-        String[] foodParts = kit.getFood().split(":");
-        int foodAmount = foodParts.length > 1 ? Integer.parseInt(foodParts[1]) : 10;
-        player.getInventory().setItem(8, new ItemStack(Material.GOLDEN_APPLE, foodAmount));
+        // Golden Apples
+        player.getInventory().setItem(8, new ItemStack(Material.GOLDEN_APPLE, 10));
         
         // Armor
         player.getInventory().setHelmet(createUnbreakable(Material.valueOf(kit.getHelmet())));
@@ -202,50 +227,36 @@ public class DuelManager {
         player.getInventory().setLeggings(createUnbreakable(Material.valueOf(kit.getLeggings())));
         player.getInventory().setBoots(createUnbreakable(Material.valueOf(kit.getBoots())));
         
-        // Shield in offhand
-        ItemStack shield = new ItemStack(Material.SHIELD);
-        ItemMeta shieldMeta = shield.getItemMeta();
-        shieldMeta.setUnbreakable(true);
-        shield.setItemMeta(shieldMeta);
+        // Shield
+        ItemStack shield = createUnbreakable(Material.SHIELD);
         player.getInventory().setItem(9, shield);
         
-        // Cobwebs (16)
+        // Cobwebs
         player.getInventory().setItem(3, new ItemStack(Material.COBWEB, 16));
         
-        // Oak Planks (64)
+        // Oak Planks
         player.getInventory().setItem(4, new ItemStack(Material.OAK_PLANKS, 64));
         
-        // Water Bucket
+        // Buckets
         player.getInventory().setItem(5, new ItemStack(Material.WATER_BUCKET));
-        
-        // Lava Bucket
         player.getInventory().setItem(6, new ItemStack(Material.LAVA_BUCKET));
-        
-        // Speed II potions (2)
-        player.getInventory().addItem(createPotion(PotionEffectType.SPEED, 2, 180));
-        player.getInventory().addItem(createPotion(PotionEffectType.SPEED, 2, 180));
-        
-        // Strength II potions (2)
-        player.getInventory().addItem(createPotion(PotionEffectType.STRENGTH, 2, 180));
-        player.getInventory().addItem(createPotion(PotionEffectType.STRENGTH, 2, 180));
     }
 
     private ItemStack createUnbreakable(Material material) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.setUnbreakable(true);
-        item.setItemMeta(meta);
+        if (meta != null) {
+            meta.setUnbreakable(true);
+            item.setItemMeta(meta);
+        }
         return item;
     }
 
     private void applyPotionEffects(Player player) {
-        // Clear existing effects first
         player.clearActivePotionEffects();
-        
-        // Apply Speed II for 3 minutes (180 ticks)
+        // Speed II for 3 minutes
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 180, 1, true, false));
-        
-        // Apply Strength II for 3 minutes (180 ticks)
+        // Strength II for 3 minutes
         player.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 180, 1, true, false));
     }
 
@@ -260,30 +271,37 @@ public class DuelManager {
         EloManager.EloChangeResult result = eloManager.applyDuelResult(winnerUuid, loserUuid);
         
         if (result != null) {
-            // Get new ranks
             int winnerRank = eloManager.getPlayerRank(winnerUuid);
             int loserRank = eloManager.getPlayerRank(loserUuid);
             
             if (winner != null && winner.isOnline()) {
                 restorePlayerInventory(winner);
-                // Clear potion effects
                 winner.clearActivePotionEffects();
                 
-                // Send messages
-                String eloMsg = configManager.getConfig().getString("messages.elo-gain", "&a+%elo% Elo! &7(Rank: #%rank%)");
-                eloMsg = eloMsg.replace("%elo%", String.valueOf(result.winnerChange)).replace("%rank%", String.valueOf(winnerRank));
-                winner.sendMessage(eloMsg);
+                // Win message
+                winner.sendMessage("");
+                winner.sendMessage(SUCCESS + "╔══════════════════════════════════╗");
+                winner.sendMessage(SUCCESS + "║" + ACCENT + "         🎉 YOU WON! 🎉        " + SUCCESS + "║");
+                winner.sendMessage(SUCCESS + "╚══════════════════════════════════╝");
+                winner.sendMessage("");
+                winner.sendMessage(INFO + "  ⚡ +" + result.winnerChange + " Elo");
+                winner.sendMessage(INFO + "  🏆 Rank: #" + winnerRank + " / " + eloManager.getTotalPlayers());
+                winner.sendMessage("");
             }
             
             if (loser != null && loser.isOnline()) {
                 restorePlayerInventory(loser);
-                // Clear potion effects
                 loser.clearActivePotionEffects();
                 
-                // Send messages
-                String eloMsg = configManager.getConfig().getString("messages.elo-lost", "&c%elo% Elo! &7(Rank: #%rank%)");
-                eloMsg = eloMsg.replace("%elo%", String.valueOf(result.loserChange)).replace("%rank%", String.valueOf(loserRank));
-                loser.sendMessage(eloMsg);
+                // Loss message
+                loser.sendMessage("");
+                loser.sendMessage(DANGER + "╔══════════════════════════════════╗");
+                loser.sendMessage(DANGER + "║" + MUTED + "         💀 YOU LOST 💀        " + DANGER + "║");
+                loser.sendMessage(DANGER + "╚══════════════════════════════════╝");
+                loser.sendMessage("");
+                loser.sendMessage(MUTED + "  ⚡ " + result.loserChange + " Elo");
+                loser.sendMessage(INFO + "  🏆 Rank: #" + loserRank + " / " + eloManager.getTotalPlayers());
+                loser.sendMessage("");
             }
         }
         

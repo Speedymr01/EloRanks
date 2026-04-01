@@ -17,6 +17,14 @@ import java.util.List;
 public class LeaderboardCommand implements CommandExecutor {
 
     private final EloRanks plugin;
+    
+    // Color scheme
+    private final ChatColor PRIMARY = ChatColor.AQUA;
+    private final ChatColor ACCENT = ChatColor.GOLD;
+    private final ChatColor SUCCESS = ChatColor.GREEN;
+    private final ChatColor DANGER = ChatColor.RED;
+    private final ChatColor INFO = ChatColor.YELLOW;
+    private final ChatColor MUTED = ChatColor.GRAY;
 
     public LeaderboardCommand(EloRanks plugin) {
         this.plugin = plugin;
@@ -29,55 +37,53 @@ public class LeaderboardCommand implements CommandExecutor {
         int page = 1;
         if (args.length > 0) {
             try {
-                page = Integer.parseInt(args[0]);
-                page = Math.max(1, page);
+                page = Math.max(1, Integer.parseInt(args[0]));
             } catch (NumberFormatException e) {
-                sender.sendMessage(ChatColor.RED + "Invalid page number!");
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid page number!");
                 return true;
             }
         }
         
         int perPage = 10;
         int totalPlayers = eloManager.getTotalPlayers();
-        int totalPages = (int) Math.ceil((double) totalPlayers / perPage);
-        
-        // Ensure page is valid
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalPlayers / perPage));
         page = Math.min(page, totalPages);
         
         List<PlayerData> leaderboard = eloManager.getLeaderboard();
         
-        // Header
-        sender.sendMessage(ChatColor.GOLD + "═══════════════════════════════");
-        sender.sendMessage(ChatColor.YELLOW + "        EloRanks Leaderboard");
-        sender.sendMessage(ChatColor.GOLD + "═══════════════════════════════");
-        sender.sendMessage(ChatColor.GRAY + "Page " + page + " of " + Math.max(1, totalPages));
+        sender.sendMessage("");
+        sender.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        sender.sendMessage(ACCENT + "║" + PRIMARY + "     🏆 EloRanks Leaderboard  " + ACCENT + "║");
+        sender.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        sender.sendMessage("");
+        sender.sendMessage(MUTED + "   📖 Page " + INFO + page + MUTED + " of " + INFO + totalPages + MUTED + " | Total: " + INFO + totalPlayers + MUTED + " players");
         sender.sendMessage("");
         
-        // Calculate start and end indices
         int startIndex = (page - 1) * perPage;
         int endIndex = Math.min(startIndex + perPage, leaderboard.size());
         
-        // Send leaderboard entries
         for (int i = startIndex; i < endIndex; i++) {
             PlayerData pd = leaderboard.get(i);
             int rank = i + 1;
             
+            String rankStr = getRankDisplay(rank);
             ChatColor rankColor = getRankColor(rank);
-            String rankSymbol = getRankSymbol(rank);
             
-            sender.sendMessage(rankColor + rankSymbol + " #" + rank + " " + ChatColor.WHITE + pd.getPlayerName() + 
-                ChatColor.YELLOW + " - " + ChatColor.GOLD + pd.getElo() + ChatColor.YELLOW + " Elo" +
-                ChatColor.GRAY + " [" + pd.getWins() + "W/" + pd.getLosses() + "L]");
+            sender.sendMessage(rankColor + rankStr + " " + pd.getPlayerName() + 
+                INFO + " → " + ACCENT + pd.getElo() + MUTED + " Elo " + MUTED + "[" + 
+                SUCCESS + pd.getWins() + MUTED + "W/" + DANGER + pd.getLosses() + MUTED + "L]");
         }
         
         sender.sendMessage("");
         
-        // Navigation hints
         if (page < totalPages) {
-            sender.sendMessage(ChatColor.GRAY + "Use /leaderboard " + (page + 1) + " for more");
-        } else if (page > 1) {
-            sender.sendMessage(ChatColor.GRAY + "Use /leaderboard " + (page - 1) + " for previous");
+            sender.sendMessage(MUTED + "   ➡️  Use " + INFO + "/leaderboard " + (page + 1) + MUTED + " for more");
         }
+        if (page > 1) {
+            sender.sendMessage(MUTED + "   ⬅️  Use " + INFO + "/leaderboard " + (page - 1) + MUTED + " for previous");
+        }
+        
+        sender.sendMessage("");
         
         return true;
     }
@@ -88,19 +94,17 @@ public class LeaderboardCommand implements CommandExecutor {
             case 2: return ChatColor.GRAY;
             case 3: return ChatColor.YELLOW;
             case 4:
-            case 5:
-                return ChatColor.WHITE;
-            default:
-                return ChatColor.GRAY;
+            case 5: return ChatColor.WHITE;
+            default: return MUTED;
         }
     }
 
-    private String getRankSymbol(int rank) {
+    private String getRankDisplay(int rank) {
         switch (rank) {
-            case 1: return "★";
-            case 2: return "☆";
-            case 3: return "◈";
-            default: return "●";
+            case 1: return "👑 #1";
+            case 2: return "🥈 #2";
+            case 3: return "🥉 #3";
+            default: return "   #" + rank;
         }
     }
 }

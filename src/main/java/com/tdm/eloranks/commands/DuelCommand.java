@@ -1,7 +1,6 @@
 package com.tdm.eloranks.commands;
 
 import com.tdm.eloranks.EloRanks;
-import com.tdm.eloranks.manager.DuelManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,6 +13,15 @@ import org.bukkit.entity.Player;
 public class DuelCommand implements CommandExecutor {
 
     private final EloRanks plugin;
+    
+    // Color scheme
+    private final ChatColor PRIMARY = ChatColor.AQUA;
+    private final ChatColor SECONDARY = ChatColor.DARK_AQUA;
+    private final ChatColor ACCENT = ChatColor.GOLD;
+    private final ChatColor SUCCESS = ChatColor.GREEN;
+    private final ChatColor DANGER = ChatColor.RED;
+    private final ChatColor INFO = ChatColor.YELLOW;
+    private final ChatColor MUTED = ChatColor.GRAY;
 
     public DuelCommand(EloRanks plugin) {
         this.plugin = plugin;
@@ -22,12 +30,11 @@ public class DuelCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players!");
+            sender.sendMessage(DANGER + "✖ " + MUTED + "This command can only be used by players!");
             return true;
         }
 
         Player player = (Player) sender;
-        DuelManager duelManager = plugin.getDuelManager();
 
         if (args.length == 0) {
             showHelp(player);
@@ -41,82 +48,82 @@ public class DuelCommand implements CommandExecutor {
             case "challenge":
             case "send":
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /duel request <player>");
+                    player.sendMessage(DANGER + "✖ " + MUTED + "Usage: /duel request <player>");
                     return true;
                 }
-                handleDuelRequest(player, args[1], duelManager);
+                handleDuelRequest(player, args[1]);
                 break;
-                
             case "accept":
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /duel accept <player>");
+                    player.sendMessage(DANGER + "✖ " + MUTED + "Usage: /duel accept <player>");
                     return true;
                 }
-                handleDuelAccept(player, args[1], duelManager);
+                handleDuelAccept(player, args[1]);
                 break;
-                
             case "decline":
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /duel decline <player>");
+                    player.sendMessage(DANGER + "✖ " + MUTED + "Usage: /duel decline <player>");
                     return true;
                 }
-                handleDuelDecline(player, args[1], duelManager);
+                handleDuelDecline(player, args[1]);
                 break;
-                
             case "help":
                 showHelp(player);
                 break;
-                
             default:
-                // Treat as direct challenge: /duel <player>
-                handleDuelRequest(player, args[0], duelManager);
+                handleDuelRequest(player, args[0]);
                 break;
         }
 
         return true;
     }
 
-    private void handleDuelRequest(Player player, String targetName, DuelManager duelManager) {
+    private void handleDuelRequest(Player player, String targetName) {
         var target = plugin.getServer().getPlayer(targetName);
         
         if (target == null) {
-            player.sendMessage(ChatColor.RED + "Player not found: " + targetName);
+            player.sendMessage(DANGER + "✖ " + MUTED + "Player not found: " + targetName);
             return;
         }
         
-        boolean success = duelManager.sendDuelRequest(player, target);
+        boolean success = plugin.getDuelManager().sendDuelRequest(player, target);
         
         if (success) {
-            player.sendMessage(ChatColor.GREEN + "Duel request sent to " + target.getName() + "!");
+            player.sendMessage(SUCCESS + "✓ " + INFO + "Duel request sent to " + ACCENT + target.getName() + INFO + "!");
         }
     }
 
-    private void handleDuelAccept(Player player, String requesterName, DuelManager duelManager) {
-        boolean success = duelManager.acceptDuelRequest(player, requesterName);
+    private void handleDuelAccept(Player player, String requesterName) {
+        boolean success = plugin.getDuelManager().acceptDuelRequest(player, requesterName);
         
         if (success) {
-            player.sendMessage(ChatColor.GREEN + "You accepted the duel!");
+            player.sendMessage(SUCCESS + "✓ " + INFO + "You accepted the duel! GLHF!");
         }
     }
 
-    private void handleDuelDecline(Player player, String requesterName, DuelManager duelManager) {
+    private void handleDuelDecline(Player player, String requesterName) {
         var requester = plugin.getServer().getPlayer(requesterName);
         
         if (requester == null) {
-            player.sendMessage(ChatColor.RED + "Player not found: " + requesterName);
+            player.sendMessage(DANGER + "✖ " + MUTED + "Player not found: " + requesterName);
             return;
         }
         
-        duelManager.removeDuelRequest(requester.getUniqueId());
+        plugin.getDuelManager().removeDuelRequest(requester.getUniqueId());
         
-        player.sendMessage(ChatColor.YELLOW + "You declined the duel request from " + requester.getName());
-        requester.sendMessage(ChatColor.RED + player.getName() + " declined your duel request!");
+        player.sendMessage(INFO + "➖ " + MUTED + "You declined " + ACCENT + requester.getName() + MUTED + "'s duel request");
+        requester.sendMessage(DANGER + "✖ " + ACCENT + player.getName() + MUTED + " declined your duel request");
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(ChatColor.GOLD + "═══ Duel Commands ═══");
-        player.sendMessage(ChatColor.YELLOW + "/duel <player> " + ChatColor.GRAY + "- Challenge a player to duel");
-        player.sendMessage(ChatColor.YELLOW + "/duel accept <player> " + ChatColor.GRAY + "- Accept a duel request");
-        player.sendMessage(ChatColor.YELLOW + "/duel decline <player> " + ChatColor.GRAY + "- Decline a duel request");
+        player.sendMessage("");
+        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "        Duel Commands       " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage("");
+        player.sendMessage(INFO + "  ⚔️  /duel <player> " + MUTED + "- Challenge to 1v1");
+        player.sendMessage(INFO + "  ✅ /duel accept <player> " + MUTED + "- Accept challenge");
+        player.sendMessage(INFO + "  ❌ /duel decline <player> " + MUTED + "- Decline challenge");
+        player.sendMessage("");
     }
 }

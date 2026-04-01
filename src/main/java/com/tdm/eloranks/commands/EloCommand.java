@@ -17,6 +17,15 @@ import java.util.List;
 public class EloCommand implements CommandExecutor {
 
     private final EloRanks plugin;
+    
+    // Color scheme
+    private final ChatColor PRIMARY = ChatColor.AQUA;
+    private final ChatColor SECONDARY = ChatColor.DARK_AQUA;
+    private final ChatColor ACCENT = ChatColor.GOLD;
+    private final ChatColor SUCCESS = ChatColor.GREEN;
+    private final ChatColor DANGER = ChatColor.RED;
+    private final ChatColor INFO = ChatColor.YELLOW;
+    private final ChatColor MUTED = ChatColor.GRAY;
 
     public EloCommand(EloRanks plugin) {
         this.plugin = plugin;
@@ -25,14 +34,13 @@ public class EloCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players!");
+            sender.sendMessage(DANGER + "✖ " + MUTED + "This command can only be used by players!");
             return true;
         }
 
         Player player = (Player) sender;
         EloManager eloManager = plugin.getEloManager();
 
-        // /elo - show own stats
         if (args.length == 0) {
             showPlayerStats(player, eloManager);
             return true;
@@ -45,17 +53,13 @@ public class EloCommand implements CommandExecutor {
             case "me":
                 showPlayerStats(player, eloManager);
                 break;
-                
             case "top":
                 showTopPlayers(player, eloManager, args);
                 break;
-                
             case "help":
                 showHelp(player);
                 break;
-                
             default:
-                // Check if viewing another player's stats
                 if (args.length >= 1) {
                     showOtherPlayerStats(player, args[0], eloManager);
                 } else {
@@ -70,38 +74,51 @@ public class EloCommand implements CommandExecutor {
     private void showPlayerStats(Player player, EloManager eloManager) {
         PlayerData pd = eloManager.getOrCreatePlayerData(player.getUniqueId(), player.getName());
         
-        player.sendMessage(ChatColor.GOLD + "═══ Your Elo Stats ═══");
-        player.sendMessage(ChatColor.YELLOW + "Rank: #" + pd.getRank() + " / " + eloManager.getTotalPlayers());
-        player.sendMessage(ChatColor.YELLOW + "Elo: " + pd.getElo());
-        player.sendMessage(ChatColor.YELLOW + "Wins: " + ChatColor.GREEN + pd.getWins());
-        player.sendMessage(ChatColor.YELLOW + "Losses: " + ChatColor.RED + pd.getLosses());
-        player.sendMessage(ChatColor.YELLOW + "Draws: " + ChatColor.GRAY + pd.getDraws());
-        player.sendMessage(ChatColor.YELLOW + "Win Rate: " + String.format("%.1f%%", pd.getWinRate()));
+        player.sendMessage("");
+        player.sendMessage(ACCENT + "╔══════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "     Your Elo Statistics     " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚══════════════════════════════╝");
+        player.sendMessage("");
+        player.sendMessage(INFO + "  🏆 Rank: " + ACCENT + "#" + pd.getRank() + MUTED + " / " + eloManager.getTotalPlayers());
+        player.sendMessage(INFO + "  ⚡ Elo: " + ACCENT + pd.getElo());
+        player.sendMessage("");
+        player.sendMessage(INFO + "  ✅ Wins:    " + SUCCESS + pd.getWins());
+        player.sendMessage(INFO + "  ❌ Losses: " + DANGER + pd.getLosses());
+        player.sendMessage(INFO + "  ➖ Draws:  " + MUTED + pd.getDraws());
+        player.sendMessage("");
+        player.sendMessage(INFO + "  📊 Win Rate: " + getWinRateColor(pd.getWinRate()) + String.format("%.1f%%", pd.getWinRate()));
+        player.sendMessage("");
     }
 
     private void showOtherPlayerStats(Player player, String targetName, EloManager eloManager) {
         Player target = plugin.getServer().getPlayer(targetName);
         
         if (target == null) {
-            // Try to find by name in data
-            // For now, just say not found
-            player.sendMessage(ChatColor.RED + "Player not found or not online!");
+            player.sendMessage(DANGER + "✖ " + MUTED + "Player not found or not online!");
             return;
         }
         
         PlayerData pd = eloManager.getPlayerData(target.getUniqueId());
         
         if (pd == null) {
-            player.sendMessage(ChatColor.RED + "Player has no stats yet!");
+            player.sendMessage(DANGER + "✖ " + MUTED + "Player has no stats yet!");
             return;
         }
         
-        player.sendMessage(ChatColor.GOLD + "═══ " + pd.getPlayerName() + "'s Stats ═══");
-        player.sendMessage(ChatColor.YELLOW + "Rank: #" + pd.getRank() + " / " + eloManager.getTotalPlayers());
-        player.sendMessage(ChatColor.YELLOW + "Elo: " + pd.getElo());
-        player.sendMessage(ChatColor.YELLOW + "Wins: " + ChatColor.GREEN + pd.getWins());
-        player.sendMessage(ChatColor.YELLOW + "Losses: " + ChatColor.RED + pd.getLosses());
-        player.sendMessage(ChatColor.YELLOW + "Win Rate: " + String.format("%.1f%%", pd.getWinRate()));
+        player.sendMessage("");
+        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "   " + target.getName() + "'s Statistics    " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage("");
+        player.sendMessage(INFO + "  🏆 Rank: " + ACCENT + "#" + pd.getRank() + MUTED + " / " + eloManager.getTotalPlayers());
+        player.sendMessage(INFO + "  ⚡ Elo: " + ACCENT + pd.getElo());
+        player.sendMessage("");
+        player.sendMessage(INFO + "  ✅ Wins:    " + SUCCESS + pd.getWins());
+        player.sendMessage(INFO + "  ❌ Losses: " + DANGER + pd.getLosses());
+        player.sendMessage(INFO + "  ➖ Draws:  " + MUTED + pd.getDraws());
+        player.sendMessage("");
+        player.sendMessage(INFO + "  📊 Win Rate: " + getWinRateColor(pd.getWinRate()) + String.format("%.1f%%", pd.getWinRate()));
+        player.sendMessage("");
     }
 
     private void showTopPlayers(Player player, EloManager eloManager, String[] args) {
@@ -110,37 +127,66 @@ public class EloCommand implements CommandExecutor {
             try {
                 count = Math.min(Integer.parseInt(args[1]), 50);
             } catch (NumberFormatException e) {
-                player.sendMessage(ChatColor.RED + "Invalid number!");
+                player.sendMessage(DANGER + "✖ " + MUTED + "Invalid number!");
                 return;
             }
         }
 
         List<PlayerData> top = eloManager.getTopPlayers(count);
         
-        player.sendMessage(ChatColor.GOLD + "═══ Top " + count + " Players ═══");
+        player.sendMessage("");
+        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "      Top " + count + " Players       " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage("");
         
         for (int i = 0; i < top.size(); i++) {
             PlayerData pd = top.get(i);
-            ChatColor rankColor = getRankColor(i + 1);
-            player.sendMessage(rankColor + "#" + (i + 1) + " " + pd.getPlayerName() + 
-                ChatColor.YELLOW + " - " + pd.getElo() + " Elo");
+            String rankStr = getRankEmoji(i + 1) + " #" + (i + 1);
+            ChatColor rankCol = getRankColor(i + 1);
+            player.sendMessage(rankCol + rankStr + " " + pd.getPlayerName() + 
+                INFO + " → " + ACCENT + pd.getElo() + " " + MUTED + "Elo");
         }
+        
+        player.sendMessage("");
     }
 
     private void showHelp(Player player) {
-        player.sendMessage(ChatColor.GOLD + "═══ EloRanks Help ═══");
-        player.sendMessage(ChatColor.YELLOW + "/elo " + ChatColor.GRAY + "- View your stats");
-        player.sendMessage(ChatColor.YELLOW + "/elo stats " + ChatColor.GRAY + "- View your stats");
-        player.sendMessage(ChatColor.YELLOW + "/elo <player> " + ChatColor.GRAY + "- View another player's stats");
-        player.sendMessage(ChatColor.YELLOW + "/elo top [count] " + ChatColor.GRAY + "- View top players");
-        player.sendMessage(ChatColor.YELLOW + "/duel <player> " + ChatColor.GRAY + "- Challenge a player");
-        player.sendMessage(ChatColor.YELLOW + "/leaderboard " + ChatColor.GRAY + "- View full leaderboard");
+        player.sendMessage("");
+        player.sendMessage(ACCENT + "╔══════════════════════════════════╗");
+        player.sendMessage(ACCENT + "║" + PRIMARY + "        EloRanks Help        " + ACCENT + "║");
+        player.sendMessage(ACCENT + "╚══════════════════════════════════╝");
+        player.sendMessage("");
+        player.sendMessage(INFO + "  /elo " + MUTED + "- View your stats");
+        player.sendMessage(INFO + "  /elo stats " + MUTED + "- View your stats");
+        player.sendMessage(INFO + "  /elo <name> " + MUTED + "- View player stats");
+        player.sendMessage(INFO + "  /elo top " + MUTED + "- View top players");
+        player.sendMessage(INFO + "  /duel <player> " + MUTED + "- Challenge to duel");
+        player.sendMessage(INFO + "  /leaderboard " + MUTED + "- Full leaderboard");
+        player.sendMessage("");
     }
 
     private ChatColor getRankColor(int rank) {
-        if (rank == 1) return ChatColor.GOLD;
-        if (rank == 2) return ChatColor.GRAY;
-        if (rank == 3) return ChatColor.YELLOW;
-        return ChatColor.WHITE;
+        switch (rank) {
+            case 1: return ChatColor.GOLD;
+            case 2: return ChatColor.GRAY;
+            case 3: return ChatColor.YELLOW;
+            default: return ChatColor.WHITE;
+        }
+    }
+    
+    private String getRankEmoji(int rank) {
+        switch (rank) {
+            case 1: return "👑";
+            case 2: return "🥈";
+            case 3: return "🥉";
+            default: return "  ";
+        }
+    }
+    
+    private ChatColor getWinRateColor(double winRate) {
+        if (winRate >= 70) return SUCCESS;
+        if (winRate >= 50) return INFO;
+        return DANGER;
     }
 }
