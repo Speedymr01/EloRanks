@@ -52,30 +52,47 @@ public class ConfigManager {
     }
 
     private void setDefaults() {
-        // Default settings
+        // ============ ELO SETTINGS ============
         config.set("elo.starting", 1000);
         config.set("elo.min", 0);
         config.set("elo.max", 10000);
         
-        // K-factor (determines how much Elo changes per match)
+        // ============ K-FACTOR (Base) ============
+        // Default K-factor values
         config.set("elo.k-factor.win", 32);
         config.set("elo.k-factor.draw", 16);
         
-        // Rank calculation
+        // ============ DYNAMIC K-FACTOR ============
+        // Enable/disable dynamic K-factor
+        config.set("elo.k-factor.dynamic.enabled", true);
+        
+        // By games played (helps new players rank up faster)
+        config.set("elo.k-factor.dynamic.by-games.enabled", true);
+        config.set("elo.k-factor.dynamic.by-games.threshold", 20);  // After 20 games, use normal K
+        config.set("elo.k-factor.dynamic.by-games.new-player-k", 48);  // K for new players (< 20 games)
+        
+        // By Elo (higher ranks more stable)
+        config.set("elo.k-factor.dynamic.by-elo.enabled", true);
+        config.set("elo.k-factor.dynamic.by-elo.threshold-1", 1500);  // At 1500+, use lower K
+        config.set("elo.k-factor.dynamic.by-elo.threshold-2", 2000);  // At 2000+, use even lower K
+        config.set("elo.k-factor.dynamic.by-elo.k-at-1500", 24);
+        config.set("elo.k-factor.dynamic.by-elo.k-at-2000", 16);
+        
+        // ============ RANK SETTINGS ============
         config.set("ranks.percentage", true); // Use top X% for rank 1
         
-        // Duel settings
+        // ============ DUEL SETTINGS ============
         config.set("duel.cooldown", 60); // seconds
         config.set("duel.request-timeout", 30); // seconds
         config.set("duel.arena-world", "duel_arena");
         
-        // Kit settings
+        // ============ KIT SETTINGS ============
         config.set("kit.sword", "DIAMOND_SWORD");
         config.set("kit.armor", "DIAMOND_CHESTPLATE,DIAMOND_LEGGINGS,DIAMOND_BOOTS");
         config.set("kit.food", "COOKED_BEEF:64");
         config.set("kit.potions", "SPEED:2,STRENGTH:1");
         
-        // Messages
+        // ============ MESSAGES ============
         config.set("messages.elo-gain", "&a+%elo% Elo! &7(Match: %match_elo%)");
         config.set("messages.elo-lost", "&c-%elo% Elo! &7(Match: %match_elo%)");
         config.set("messages.new-rank", "&6&l★ &aYou are now Rank %rank%! ★");
@@ -135,7 +152,7 @@ public class ConfigManager {
         configs.put("config", config);
     }
 
-    // Convenience methods for common config values
+    // ============ ELO GETTERS ============
     public int getStartingElo() {
         return config.getInt("elo.starting", 1000);
     }
@@ -156,6 +173,83 @@ public class ConfigManager {
         return config.getInt("elo.k-factor.draw", 16);
     }
 
+    // ============ DYNAMIC K-FACTOR GETTERS ============
+    public boolean isDynamicKFactorEnabled() {
+        return config.getBoolean("elo.k-factor.dynamic.enabled", true);
+    }
+
+    public boolean isDynamicKByGamesEnabled() {
+        return config.getBoolean("elo.k-factor.dynamic.by-games.enabled", true);
+    }
+
+    public int getDynamicKByGamesThreshold() {
+        return config.getInt("elo.k-factor.dynamic.by-games.threshold", 20);
+    }
+
+    public int getDynamicKNewPlayer() {
+        return config.getInt("elo.k-factor.dynamic.by-games.new-player-k", 48);
+    }
+
+    public boolean isDynamicKByEloEnabled() {
+        return config.getBoolean("elo.k-factor.dynamic.by-elo.enabled", true);
+    }
+
+    public int getDynamicKThreshold1() {
+        return config.getInt("elo.k-factor.dynamic.by-elo.threshold-1", 1500);
+    }
+
+    public int getDynamicKThreshold2() {
+        return config.getInt("elo.k-factor.dynamic.by-elo.threshold-2", 2000);
+    }
+
+    public int getDynamicKAt1500() {
+        return config.getInt("elo.k-factor.dynamic.by-elo.k-at-1500", 24);
+    }
+
+    public int getDynamicKAt2000() {
+        return config.getInt("elo.k-factor.dynamic.by-elo.k-at-2000", 16);
+    }
+
+    /**
+     * Calculate the effective K-factor for a player based on their stats.
+     * Uses dynamic K-factor if enabled, otherwise returns base K-factor.
+     * 
+     * @param playerElo The player's current Elo
+     * @param totalMatches Total matches the player has played
+     * @param isDraw Whether the match was a draw
+     * @return The effective K-factor to use
+     */
+    public int getEffectiveKFactor(int playerElo, int totalMatches, boolean isDraw) {
+        // Return draw K-factor if it's a draw
+        if (isDraw) {
+            return getKFactorDraw();
+        }
+
+        // If dynamic K is disabled, return base K-factor
+        if (!isDynamicKFactorEnabled()) {
+            return getKFactorWin();
+        }
+
+        int kFactor = getKFactorWin();
+
+        // Apply by-games reduction if enabled
+        if (isDynamicKByGamesEnabled() && totalMatches < getDynamicKByGamesThreshold()) {
+            kFactor = getDynamicKNewPlayer();
+        }
+
+        // Apply by-Elo reduction if enabled
+        if (isDynamicKByEloEnabled()) {
+            if (playerElo >= getDynamicKThreshold2()) {
+                kFactor = getDynamicKAt2000();
+            } else if (playerElo >= getDynamicKThreshold1()) {
+                kFactor = getDynamicKAt1500();
+            }
+        }
+
+        return kFactor;
+    }
+
+    // ============ DUEL GETTERS ============
     public int getDuelCooldown() {
         return config.getInt("duel.cooldown", 60);
     }

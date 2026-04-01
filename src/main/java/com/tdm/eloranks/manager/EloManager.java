@@ -79,7 +79,7 @@ public class EloManager {
             }
         }
         
-        updateLeaderboard();
+        updateRanks();
         plugin.getLogger().info("Loaded " + playerCache.size() + " player records");
     }
 
@@ -114,12 +114,9 @@ public class EloManager {
         if (pd == null) {
             pd = new PlayerData(uuid, playerName, configManager.getStartingElo());
             playerCache.put(uuid, pd);
-            updateLeaderboard();
-            
-            // Save immediately for new players
+            updateRanks();
             saveAll();
         } else {
-            // Update name in case they changed it
             if (!pd.getPlayerName().equals(playerName)) {
                 pd.setPlayerName(playerName);
             }
@@ -128,37 +125,32 @@ public class EloManager {
     }
 
     /**
-     * Calculate Elo change using standard Elo formula.
+     * Calculate Elo change using standard Elo formula with dynamic K-factor.
      * 
-     * @param winnerElo Winner/Player's current Elo
-     * @param loserElo Loser/Opponent's current Elo
-     * @param isWin true if winner is calculating their gain, false for loser
+     * @param playerElo The player's current Elo
+     * @param opponentElo The opponent's current Elo
+     * @param totalMatches Total matches the player has played (for dynamic K)
+     * @param isWin true if player won, false if lost
      * @return Elo points to add/subtract
      */
-    public int calculateEloChange(int winnerElo, int loserElo, boolean isWin) {
+    public int calculateEloChange(int playerElo, int opponentElo, int totalMatches, boolean isWin) {
         // Expected score calculation
-        double expectedWinner = 1.0 / (1.0 + Math.pow(10, (loserElo - winnerElo) / 400.0));
-        double expectedLoser = 1.0 - expectedWinner;
+        double expected = 1.0 / (1.0 + Math.pow(10, (opponentElo - playerElo) / 400.0));
         
-        // Determine K-factor based on games played (fewer games = higher K-factor)
-        // This allows newer players to rank up faster
-        double kFactor = configManager.getKFactorWin();
+        // Get effective K-factor (dynamic based on games played and Elo)
+        int kFactor = configManager.getEffectiveKFactor(playerElo, totalMatches, false);
         
         if (isWin) {
-            // Winner gains: K * (1 - Expected)
-            return (int) Math.round(kFactor * (1.0 - expectedWinner));
+            // Win: K * (1 - Expected)
+            return (int) Math.round(kFactor * (1.0 - expected));
         } else {
-            // Loser loses: K * (0 - Expected) = -K * Expected
-            return (int) Math.round(-kFactor * expectedLoser);
+            // Loss: K * (0 - Expected) = -K * Expected
+            return (int) Math.round(-kFactor * expected);
         }
     }
 
     /**
      * Apply Elo changes after a duel.
-     * 
-     * @param winnerUuid Winner's UUID
-     * @param loserUuid Loser's UUID
-     * @return EloChangeResult containing the changes
      */
     public EloChangeResult applyDuelResult(UUID winnerUuid, UUID loserUuid) {
         PlayerData winner = getPlayerData(winnerUuid);
@@ -168,8 +160,9 @@ public class EloManager {
             return null;
         }
         
-        int winnerChange = calculateEloChange(winner.getElo(), loser.getElo(), true);
-        int loserChange = calculateEloChange(winner.getElo(), loser.getElo(), false);
+        // Calculate Elo changes with dynamic K-factor
+        int winnerChange = calculateEloChange(winner.getElo(), loser.getElo(), winner.getTotalMatches(), true);
+        int loserChange = calculateEloChange(loser.getElo(), winner.getElo(), loser.getTotalMatches(), false);
         
         // Apply changes
         int newWinnerElo = Math.max(configManager.getMinElo(), 
@@ -186,10 +179,7 @@ public class EloManager {
         winner.setLastDuelTime(System.currentTimeMillis());
         loser.setLastDuelTime(System.currentTimeMillis());
         
-        // Update ranks
         updateRanks();
-        
-        // Save data
         saveAll();
         
         return new EloChangeResult(winnerChange, loserChange);
@@ -201,16 +191,13 @@ public class EloManager {
     public void updateRanks() {
         if (playerCache.isEmpty()) return;
         
-        // Sort by Elo descending
         List<PlayerData> sorted = new ArrayList<>(playerCache.values());
         sorted.sort((a, b) -> Integer.compare(b.getElo(), a.getElo()));
         
-        // Update ranks (Rank 1 = highest Elo)
         for (int i = 0; i < sorted.size(); i++) {
             sorted.get(i).setRank(i + 1);
         }
         
-        // Update leaderboard
         leaderboard.clear();
         leaderboard.addAll(sorted);
     }
@@ -234,10 +221,6 @@ public class EloManager {
 
     public int getTotalPlayers() {
         return playerCache.size();
-    }
-
-    public void updateLeaderboard() {
-        updateRanks();
     }
 
     /**
