@@ -6,19 +6,12 @@
 
     <groupId>com.tdm</groupId>
 
-    <!-- Hardcoded artifactId per project -->
     <artifactId>EloRanks</artifactId>
-
-    <!-- Version adapts to GitHub tag -->
-    <version>${revision}</version>
+    <version>1.0.0</version>
 
     <packaging>jar</packaging>
 
     <properties>
-        <!-- Pull version from GitHub tag name (e.g., v1.0.0 -> 1.0.0) -->
-        <revision>${env.GITHUB_REF_NAME}</revision>
-        <revision>${revision.startsWith('v') ? revision.substring(1) : revision}</revision>
-
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -46,31 +39,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.5.0</version>
-                <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
