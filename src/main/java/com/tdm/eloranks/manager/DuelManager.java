@@ -1054,6 +1054,15 @@ public class DuelManager {
         // Get opponent first
         UUID opponentUuid = activeDuels.get(playerUuid);
         
+        // Cancel countdown tasks if in countdown phase
+        plugin.getCountdownManager().cancelCountdowns(playerUuid, opponentUuid);
+        
+        // Clear pending duels (in case in countdown phase)
+        pendingDuels.remove(playerUuid);
+        if (opponentUuid != null) {
+            pendingDuels.remove(opponentUuid);
+        }
+        
         // Restore inventory and location for player
         Player player = Bukkit.getPlayer(playerUuid);
         if (player != null && player.isOnline()) {
