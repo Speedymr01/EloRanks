@@ -784,30 +784,24 @@ public class DuelManager {
     }
     
     /**
-     * Start duel with countdown timer.
+     * Start duel with countdown timer (second countdown after teleport).
      */
     private void startDuelCountdown(Player player1, Player player2, ArenaManager.Arena arena) {
         CountdownManager countdown = plugin.getCountdownManager();
         
-        // Track pending duels for scoreboard countdown display
-        int teleportSeconds = configManager.getTeleportCountdownSeconds();
+        // Update pending duels for scoreboard countdown display (just the duel start seconds)
         int duelSeconds = configManager.getDuelStartCountdownSeconds();
-        int totalCountdown = teleportSeconds + duelSeconds;
+        pendingDuels.put(player1.getUniqueId(), duelSeconds);
+        pendingDuels.put(player2.getUniqueId(), duelSeconds);
         
-        pendingDuels.put(player1.getUniqueId(), totalCountdown);
-        pendingDuels.put(player2.getUniqueId(), totalCountdown);
-        
-        // Show countdown for both players
-        countdown.startTeleportCountdown(player1, player2, () -> {
-            // After teleport countdown, start FIGHT countdown
-            countdown.startDuelCountdown(player1, player2, () -> {
-                // Duel officially begins - remove from pending and record start time
-                pendingDuels.remove(player1.getUniqueId());
-                pendingDuels.remove(player2.getUniqueId());
-                
-                // Send start messages
-                sendDuelStartMessages(player1, player2, arena);
-            });
+        // Show duel start countdown for both players (NOT teleport countdown again!)
+        countdown.startDuelCountdown(player1, player2, () -> {
+            // Duel officially begins - remove from pending and record start time
+            pendingDuels.remove(player1.getUniqueId());
+            pendingDuels.remove(player2.getUniqueId());
+            
+            // Send start messages
+            sendDuelStartMessages(player1, player2, arena);
         });
     }
     
