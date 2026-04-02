@@ -160,21 +160,27 @@ public class ScoreboardManager {
             scoreboard = player.getScoreboard();
         }
         
+        // Get animated title ONCE and reuse it (prevents animation spreading)
+        String animatedTitle = getAnimatedTitleOnce();
+        
         // Get or create objective
         objective = scoreboard.getObjective("eloranks");
         if (objective == null) {
-            objective = scoreboard.registerNewObjective("eloranks", "dummy", getAnimatedTitleOnce());
+            objective = scoreboard.registerNewObjective("eloranks", "dummy", animatedTitle);
             objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         } else {
             // Only update the title, not all entries
-            objective.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(getAnimatedTitleOnce()));
+            objective.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(animatedTitle));
         }
         
-        // Clear existing entries first to prevent duplication
+        // CRITICAL: Clear ALL entries in the objective to prevent duplication
+        // We must iterate over a copy since we can't modify during iteration
+        java.util.List<String> entriesToRemove = new java.util.ArrayList<>();
         for (String entry : objective.getScoreboard().getEntries()) {
-            if (entry.startsWith("§")) {  // Only clear our entries
-                objective.getScoreboard().resetScores(entry);
-            }
+            entriesToRemove.add(entry);
+        }
+        for (String entry : entriesToRemove) {
+            objective.getScoreboard().resetScores(entry);
         }
         
         // Get player data
@@ -190,7 +196,7 @@ public class ScoreboardManager {
         
         // Set scoreboard entries with proper color handling
         setScoreboardEntry(objective, "§7§m-----------------", 12);
-        setScoreboardEntry(objective, getAnimatedTitleOnce(), 11);
+        setScoreboardEntry(objective, animatedTitle, 11);  // Use stored title
         setScoreboardEntry(objective, "§6✦ §eRank §6✦", 10);
         setScoreboardEntry(objective, "  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers(), 9);
         setScoreboardEntry(objective, " ", 8);
