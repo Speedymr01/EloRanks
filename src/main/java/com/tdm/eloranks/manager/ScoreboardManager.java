@@ -21,15 +21,8 @@ public class ScoreboardManager {
     private final EloRanks plugin;
     private final EloManager eloManager;
     
-    // Animated title frames
-    private final String[] titleFrames = {
-        "§b§lE§r§el§r§bo§r§el§r§bR§r§ea§r§bn§r§bk§r§bs",
-        "§e§lE§r§dl§r§eo§r§dl§r§eR§r§da§r§en§r§dk§r§bs",
-        "§a§lE§r§dl§r§co§r§dl§r§cR§r§da§r§en§r§dk§r§bs",
-        "§c§lE§r§da§r§eL§r§do§r§eR§r§ca§r§en§r§dk§r§es",
-        "§d§lE§r§da§r§bL§r§co§r§bR§r§ca§r§bn§r§dk§r§bs",
-    };
-    private int currentFrame = 0;
+    // Static title (no animation)
+    private static final String TITLE = "§b§lEloRanks";
     
     // Track active bossbars for duel players
     private final Map<UUID, BossBar> activeBossBars = new HashMap<>();
@@ -40,13 +33,23 @@ public class ScoreboardManager {
     private final ChatColor SUCCESS = ChatColor.GREEN;
     private final ChatColor INFO = ChatColor.YELLOW;
     private final ChatColor MUTED = ChatColor.GRAY;
+    
+    // Team scoreboard for nametags - initialized early
+    private Scoreboard teamScoreboard = null;
 
     public ScoreboardManager(EloRanks plugin) {
         this.plugin = plugin;
         this.eloManager = plugin.getEloManager();
         
-        // Create main scoreboard for team prefixes
-        setupTeamScoreboard();
+        // Check if scoreboard is enabled in config
+        if (!plugin.getConfigManager().isScoreboardEnabled()) {
+            plugin.getLogger().info("Scoreboard disabled in config, skipping initialization");
+            return;
+        }
+        
+        // Create main scoreboard for team prefixes FIRST
+        this.teamScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        setupTeamScoreboard(this.teamScoreboard);
         
         // Update scoreboard for all players periodically
         startScoreboardUpdater();
@@ -59,9 +62,7 @@ public class ScoreboardManager {
     /**
      * Setup the main scoreboard with teams for nametags.
      */
-    private void setupTeamScoreboard() {
-        // Create a persistent scoreboard for team prefixes
-        teamScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+    private void setupTeamScoreboard(Scoreboard teamScoreboard) {
         
         // Create teams for each rank prefix
         for (int rank = 1; rank <= 50; rank++) {
@@ -78,8 +79,6 @@ public class ScoreboardManager {
         Team defaultTeam = teamScoreboard.registerNewTeam("unranked");
         defaultTeam.prefix(LegacyComponentSerializer.legacyAmpersand().deserialize("§7[#?§7] "));
     }
-    
-    private Scoreboard teamScoreboard;
     
     /**
      * Get rank prefix with color based on rank position.
@@ -153,22 +152,16 @@ public class ScoreboardManager {
         Scoreboard scoreboard;
         Objective objective;
         
-        // Get or create scoreboard
-        if (player.getScoreboard() == Bukkit.getScoreboardManager().getMainScoreboard()) {
-            scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
-        } else {
-            scoreboard = player.getScoreboard();
-        }
+        // Get or create scoreboard - always create fresh to avoid issues
+        scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
         
-        // Get or create objective
-        objective = scoreboard.getObjective("eloranks");
-        if (objective == null) {
-            objective = scoreboard.registerNewObjective("eloranks", "dummy", getAnimatedTitle());
-            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        } else {
-            // Update the title with animation using Component
-            objective.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(getAnimatedTitle()));
-        }
+        // Get static title
+        String title = getTitle();
+        
+        // Create new objective with title
+        objective = scoreboard.registerNewObjective("eloranks", "dummy", 
+            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(title));
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         
         // Get player data
         PlayerData pd = eloManager.getOrCreatePlayerData(player.getUniqueId(), player.getName());
@@ -181,37 +174,107 @@ public class ScoreboardManager {
         // Get opponent info if in duel
         String opponentInfo = getOpponentInfo(player);
         
-        // Set scoreboard entries with proper color handling
-        setScoreboardEntry(objective, "§7§m-----------------", 12);
-        setScoreboardEntry(objective, getAnimatedTitle(), 11);
-        setScoreboardEntry(objective, "§6✦ §eRank §6✦", 10);
-        setScoreboardEntry(objective, "  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers(), 9);
-        setScoreboardEntry(objective, " ", 8);
-        setScoreboardEntry(objective, "§6⚔ §eElo §6⚔", 7);
-        setScoreboardEntry(objective, "  §e" + elo, 6);
-        setScoreboardEntry(objective, "  ", 5);
-        setScoreboardEntry(objective, "§6🌍 §eWorld §6🌍", 4);
-        setScoreboardEntry(objective, "  §e" + worldName, 3);
+        // Get matchmaking status
+        boolean inMatchmaking = plugin.getDuelManager().isWaitingForMatchmaking(player.getUniqueId());
+        int matchWaitTime = plugin.getDuelManager().getMatchmakingWaitTime(player.getUniqueId());
         
-        // Show opponent info if in duel
-        if (opponentInfo != null) {
-            setScoreboardEntry(objective, "§c§l⚔ §eVS §c⚔", 2);
-            setScoreboardEntry(objective, "  §e" + opponentInfo, 1);
-        } else {
-            setScoreboardEntry(objective, "§7§m-----------------", 2);
+        // Get request counts
+        int requestsOut = plugin.getDuelManager().getOutgoingRequests(player.getUniqueId());
+        int requestsIn = plugin.getDuelManager().getIncomingRequests(player.getUniqueId());
+        
+        // Set scoreboard entries - use simple text without complex team prefixes
+        // Scores go from high to low (15 at top)
+        int score = 15;
+        
+        // Divider top
+        objective.getScore("§7§m-----------------").setScore(score--);
+        
+        // Rank section
+        objective.getScore("§6✦ §eRank §6✦").setScore(score--);
+        objective.getScore("  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers()).setScore(score--);
+        
+        // Empty line
+        objective.getScore(" ").setScore(score--);
+        
+        // Elo section
+        objective.getScore("§6⚔ §eElo §6⚔").setScore(score--);
+        objective.getScore("  §e" + elo).setScore(score--);
+        
+        // Empty line
+        objective.getScore("  ").setScore(score--);
+        
+        // World section (if enabled in config)
+        if (plugin.getConfigManager().isScoreboardWorldEnabled()) {
+            objective.getScore("§6🌍 §eWorld §6🌍").setScore(score--);
+            objective.getScore("  §e" + worldName).setScore(score--);
+            objective.getScore("  ").setScore(score--);
         }
         
-        // Use the scoreboard with team prefixes (nametags) if available, otherwise use current
-        Scoreboard finalScoreboard = playerScoreboards.getOrDefault(player.getUniqueId(), scoreboard);
-        player.setScoreboard(finalScoreboard);
+        // Requests section
+        if (requestsOut > 0 || requestsIn > 0) {
+            objective.getScore("§e📨 §eRequests §e📨").setScore(score--);
+            if (requestsOut > 0) {
+                objective.getScore("  §eOut: §b" + requestsOut).setScore(score--);
+            }
+            if (requestsIn > 0) {
+                objective.getScore("  §eIn: §b" + requestsIn).setScore(score--);
+            }
+            objective.getScore(" ").setScore(score--);
+        }
+        
+        // Matchmaking or countdown section (only shows when in matchmaking or countdown)
+        Integer countdown = plugin.getDuelManager().getPendingDuelCountdown(player.getUniqueId());
+        
+        if (countdown != null) {
+            // Match found - show countdown instead of matchmaking
+            // Get actual countdown totals from config
+            int teleportSeconds = plugin.getConfigManager().getTeleportCountdownSeconds();
+            int duelSeconds = plugin.getConfigManager().getDuelStartCountdownSeconds();
+            int total = teleportSeconds + duelSeconds;
+            
+            // Animated countdown progress bar
+            int filled = total - countdown;
+            int barLength = 10;
+            int filledBars = (int) ((float) filled / total * barLength);
+            StringBuilder bar = new StringBuilder("§a");
+            for (int i = 0; i < barLength; i++) {
+                if (i < filledBars) {
+                    bar.append("█");
+                } else {
+                    bar.append("§7§l█");
+                }
+            }
+            
+            objective.getScore("§e⏱️ §eMatch Found! §e⏱️").setScore(score--);
+            objective.getScore("  §b" + bar + " §e" + countdown + "s").setScore(score--);
+            objective.getScore(" ").setScore(score--);
+        } else if (inMatchmaking) {
+            // Still searching - show matchmaking with animation
+            int dotCount = (int) ((System.currentTimeMillis() / 500) % 3);
+            String dots = "§e" + ".".repeat(dotCount);
+            
+            objective.getScore("§e🎯 §eSearching... " + dots).setScore(score--);
+            objective.getScore("  §bWait time: §e" + matchWaitTime + "s").setScore(score--);
+            objective.getScore(" ").setScore(score--);
+        }
+        
+        // Divider or VS section (if enabled in config)
+        if (plugin.getConfigManager().isScoreboardOpponentEnabled() && opponentInfo != null) {
+            objective.getScore("§c§l⚔ §eVS §c⚔").setScore(score--);
+            objective.getScore("  §e" + opponentInfo).setScore(score--);
+        } else {
+            objective.getScore("§7§m-----------------").setScore(score--);
+        }
+        
+        // Assign scoreboard to player
+        player.setScoreboard(scoreboard);
     }
     
     /**
-     * Get animated title - cycles through colors.
+     * Get static title.
      */
-    private String getAnimatedTitle() {
-        currentFrame = (currentFrame + 1) % titleFrames.length;
-        return titleFrames[currentFrame];
+    private String getTitle() {
+        return TITLE;
     }
     
     /**
@@ -326,6 +389,9 @@ public class ScoreboardManager {
      */
     private void startScoreboardUpdater() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            // Decrement pending duel countdowns
+            plugin.getDuelManager().decrementPendingDuels();
+            
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.hasPermission("er.duel")) {
                     updateScoreboard(player);
@@ -338,13 +404,20 @@ public class ScoreboardManager {
      * Update bossbars showing opponent health during duels.
      */
     private void startBossbarUpdater() {
+        if (!plugin.getConfigManager().isBossbarEnabled()) {
+            return; // Bossbar disabled in config
+        }
+        
+        int updateInterval = plugin.getConfigManager().getBossbarHealthUpdateInterval();
+        long ticks = updateInterval * 20L; // Convert seconds to ticks
+        
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.hasPermission("er.duel")) {
                     updateDuelBossbar(player);
                 }
             }
-        }, 10L, 10L); // Update every 0.5 seconds (10 ticks)
+        }, 10L, ticks);
     }
     
     /**

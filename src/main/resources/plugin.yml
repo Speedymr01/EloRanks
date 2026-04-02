@@ -9,7 +9,6 @@ commands:
   er:
     description: View your Elo stats and rank
     usage: /<command> [stats|top|help] [player]
-    aliases: [elo, elostats, erstats]
   duel:
     description: Challenge players to 1v1 duels
     usage: /<command> <player> | accept <player> | decline <player> | match | cancel | help
@@ -19,11 +18,9 @@ commands:
   eradmin:
     description: Admin commands for EloRanks
     usage: /<command> <subcommand> [args]
-    aliases: [eloranksadmin]
   surrender:
     description: Surrender from an active duel (30s minimum wait)
     usage: /<command>
-    aliases: [forfeit, sq]
 
 permissions:
   er.duel:

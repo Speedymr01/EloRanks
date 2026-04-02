@@ -60,48 +60,32 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         String subCommand = args[0].toLowerCase();
 
         switch (subCommand) {
-            case "request":
-            case "challenge":
-            case "send":
+            case "request" -> {
                 if (args.length < 2) {
                     player.sendMessage(DANGER + "✖ " + MUTED + "Usage: /duel request <player>");
                     return true;
                 }
                 handleDuelRequest(player, args[1]);
-                break;
-            case "accept":
+            }
+            case "accept" -> {
                 if (args.length < 2) {
                     player.sendMessage(DANGER + "✖ " + MUTED + "Usage: /duel accept <player>");
                     return true;
                 }
                 handleDuelAccept(player, args[1]);
-                break;
-            case "decline":
+            }
+            case "decline" -> {
                 if (args.length < 2) {
                     player.sendMessage(DANGER + "✖ " + MUTED + "Usage: /duel decline <player>");
                     return true;
                 }
                 handleDuelDecline(player, args[1]);
-                break;
-            case "match":
-            case "queue":
-            case "mm":
-                handleMatchmaking(player);
-                break;
-            case "cancel":
-            case "stop":
-                handleCancelMatchmaking(player);
-                break;
-            case "surrender":
-            case "forfeit":
-                handleSurrender(player);
-                break;
-            case "help":
-                showHelp(player);
-                break;
-            default:
-                handleDuelRequest(player, args[0]);
-                break;
+            }
+            case "match", "queue" -> handleMatchmaking(player);
+            case "cancel" -> handleCancelMatchmaking(player);
+            case "surrender" -> handleSurrender(player);
+            case "help" -> showHelp(player);
+            default -> handleDuelRequest(player, args[0]);
         }
 
         return true;
@@ -115,11 +99,7 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
             return;
         }
         
-        boolean success = plugin.getDuelManager().sendDuelRequest(player, target);
-        
-        if (success) {
-            player.sendMessage(SUCCESS + "✓ " + INFO + "Duel request sent to " + ACCENT + target.getName() + INFO + "!");
-        }
+        plugin.getDuelManager().sendDuelRequest(player, target);
     }
 
     private void handleDuelAccept(Player player, String requesterName) {
@@ -161,11 +141,13 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
 
     private void showHelp(Player player) {
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "      Duel Commands      " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        player.sendMessage("----------------");
+        player.sendMessage("  Duel Commands  ");
+        player.sendMessage("----------------");
+        player.sendMessage("");
         player.sendMessage("");
         player.sendMessage(INFO + "  ⚔️  /duel <player> " + MUTED + "- Challenge to 1v1");
+        player.sendMessage(INFO + "  ✅ /duel request <player> " + MUTED + "- Send duel request");
         player.sendMessage(INFO + "  ✅ /duel accept <player> " + MUTED + "- Accept challenge");
         player.sendMessage(INFO + "  ❌ /duel decline <player> " + MUTED + "- Decline challenge");
         player.sendMessage(INFO + "  🎯 /duel match " + MUTED + "- Enter matchmaking queue");
@@ -180,38 +162,35 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
             return List.of();
         }
 
-        List<String> subcommands = List.of("request", "challenge", "send", "accept", "decline", "help");
-
         if (args.length == 0) {
-            return subcommands;
+            // Full subcommand list for first argument
+            return List.of("request", "accept", "decline", "match", "cancel", "surrender", "help");
         }
 
         String current = args[args.length - 1].toLowerCase();
         
-        // Match subcommands
-        List<String> matches = subcommands.stream()
-            .filter(s -> s.toLowerCase().startsWith(current))
-            .collect(Collectors.toList());
-
-        // Add player names
         if (args.length == 1) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.getName().toLowerCase().startsWith(current)) {
-                    matches.add(p.getName());
-                }
-            }
-        } else if (args.length == 2) {
+            // Match subcommands
+            List<String> subcommands = List.of("request", "accept", "decline", "match", "cancel", "surrender", "help");
+            return subcommands.stream()
+                .filter(s -> s.toLowerCase().startsWith(current))
+                .collect(Collectors.toList());
+        }
+
+        // Second argument - player names for request/accept/decline
+        if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("request") || sub.equals("challenge") || sub.equals("send") ||
-                sub.equals("accept") || sub.equals("decline")) {
+            if (sub.equals("request") || sub.equals("accept") || sub.equals("decline")) {
+                List<String> matches = new java.util.ArrayList<>();
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.getName().toLowerCase().startsWith(current)) {
+                    if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
                         matches.add(p.getName());
                     }
                 }
+                return matches;
             }
         }
 
-        return matches;
+        return List.of();
     }
 }

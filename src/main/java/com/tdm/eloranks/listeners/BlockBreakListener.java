@@ -1,7 +1,6 @@
 package com.tdm.eloranks.listeners;
 
 import com.tdm.eloranks.EloRanks;
-import com.tdm.eloranks.manager.ArenaManager;
 import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;

@@ -6,6 +6,10 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 /**
  * Manages countdown timers and titles for duels.
  */
@@ -13,8 +17,29 @@ public class CountdownManager {
 
     private final EloRanks plugin;
     
+    // Track active countdown tasks per player
+    private final Map<UUID, Integer> activeCountdownTasks = new HashMap<>();
+    
     public CountdownManager(EloRanks plugin) {
         this.plugin = plugin;
+    }
+    
+    /**
+     * Cancel any active countdown for a player.
+     */
+    public void cancelCountdown(UUID playerUuid) {
+        Integer taskId = activeCountdownTasks.remove(playerUuid);
+        if (taskId != null && taskId > 0) {
+            Bukkit.getScheduler().cancelTask(taskId);
+        }
+    }
+    
+    /**
+     * Cancel all active countdowns for a player pair.
+     */
+    public void cancelCountdowns(UUID player1Uuid, UUID player2Uuid) {
+        cancelCountdown(player1Uuid);
+        cancelCountdown(player2Uuid);
     }
     
     /**
@@ -36,11 +61,17 @@ public class CountdownManager {
      * Run a simple countdown without color progression.
      */
     private void runSimpleCountdown(Player player1, Player player2, int seconds, Runnable onComplete) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+        int taskId = Bukkit.getScheduler().runTask(plugin, new Runnable() {
             private int currentSecond = seconds;
             
             @Override
             public void run() {
+                // Check if countdown was cancelled
+                if (!activeCountdownTasks.containsKey(player1.getUniqueId()) && 
+                    !activeCountdownTasks.containsKey(player2.getUniqueId())) {
+                    return; // Countdown was cancelled
+                }
+                
                 if (currentSecond > 0) {
                     if (player1.isOnline()) {
                         Title title = Title.title(
@@ -63,12 +94,20 @@ public class CountdownManager {
                     Bukkit.getScheduler().runTaskLater(plugin, this, 20L);
                 } else {
                     // Done - run the callback
+                    // Clear task tracking
+                    activeCountdownTasks.remove(player1.getUniqueId());
+                    activeCountdownTasks.remove(player2.getUniqueId());
+                    
                     if (onComplete != null) {
-                        Bukkit.getScheduler().runTask(plugin, onComplete);
+                        onComplete.run();
                     }
                 }
             }
-        });
+        }).getTaskId();
+        
+        // Track task IDs
+        activeCountdownTasks.put(player1.getUniqueId(), taskId);
+        activeCountdownTasks.put(player2.getUniqueId(), taskId);
     }
     
     /**
@@ -92,12 +131,18 @@ public class CountdownManager {
      * Run countdown with specific colors for each second.
      */
     private void runColoredCountdown(Player player1, Player player2, int seconds, Runnable onComplete) {
-        // Use scheduler to run each second
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+        // Use scheduler to run each second - use sync task
+        int taskId = Bukkit.getScheduler().runTask(plugin, new Runnable() {
             private int currentSecond = seconds;
             
             @Override
             public void run() {
+                // Check if countdown was cancelled
+                if (!activeCountdownTasks.containsKey(player1.getUniqueId()) && 
+                    !activeCountdownTasks.containsKey(player2.getUniqueId())) {
+                    return; // Countdown was cancelled
+                }
+                
                 if (currentSecond > 0) {
                     // Show countdown to both players
                     showColoredSecond(player1, currentSecond);
@@ -112,13 +157,21 @@ public class CountdownManager {
                     showGoMessage(player1);
                     showGoMessage(player2);
                     
+                    // Clear task tracking
+                    activeCountdownTasks.remove(player1.getUniqueId());
+                    activeCountdownTasks.remove(player2.getUniqueId());
+                    
                     // Run the completion callback
                     if (onComplete != null) {
-                        Bukkit.getScheduler().runTask(plugin, onComplete);
+                        onComplete.run();
                     }
                 }
             }
-        });
+        }).getTaskId();
+        
+        // Track task IDs
+        activeCountdownTasks.put(player1.getUniqueId(), taskId);
+        activeCountdownTasks.put(player2.getUniqueId(), taskId);
     }
     
     /**

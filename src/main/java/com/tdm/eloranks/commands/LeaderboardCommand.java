@@ -53,10 +53,9 @@ public class LeaderboardCommand implements CommandExecutor, TabCompleter {
         
         List<PlayerData> leaderboard = eloManager.getLeaderboard();
         
-        sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "   🏆 EloRanks Leaderboard   " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        sender.sendMessage("----------------");
+        sender.sendMessage("  EloRanks Leaderboard  ");
+        sender.sendMessage("----------------");
         sender.sendMessage("");
         sender.sendMessage(MUTED + "   📖 Page " + INFO + page + MUTED + " of " + INFO + totalPages + MUTED + " | Total: " + INFO + totalPlayers + MUTED + " players");
         sender.sendMessage("");

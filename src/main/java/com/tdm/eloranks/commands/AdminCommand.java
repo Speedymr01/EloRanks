@@ -12,7 +12,6 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +28,6 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     private final ChatColor DANGER = ChatColor.RED;
     private final ChatColor INFO = ChatColor.YELLOW;
     private final ChatColor MUTED = ChatColor.GRAY;
-    private final ChatColor DEBUG = ChatColor.LIGHT_PURPLE;
 
     public AdminCommand(EloRanks plugin) {
         this.plugin = plugin;
@@ -50,23 +48,23 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         String subcommand = args[0].toLowerCase();
 
         switch (subcommand) {
-            case "makeduel", "forceduel", "startduel" -> handleMakeDuel(sender, args);
-            case "addarena", "newarena", "createarena" -> handleAddArena(sender);
-            case "reload", "rl", "reloadconfig" -> handleReload(sender);
-            case "resetall", "resettop", "cleardata", "wipedata" -> handleResetAll(sender);
-            case "resetplayer", "resetstats", "resetp" -> handleResetPlayer(sender, args);
-            case "setelo", "setrating" -> handleSetElo(sender, args);
-            case "adde", "addelo", "addrating" -> handleAddElo(sender, args);
-            case "arenainfo", "arenas", "arenastatus" -> handleArenaInfo(sender);
-            case "forcereset", "resetarena", "cleararena" -> handleForceResetArena(sender, args);
-            case "stats", "statistics", "plstats" -> handleStats(sender);
-            case "debug", "dbg", "diag" -> handleDebug(sender);
-            case "endduel", "stopduel", "cancelduel" -> handleEndDuel(sender, args);
-            case "tparena", "gotoarena", "arenatp" -> handleTeleport(sender, args);
-            case "getpos", "position", "arenapos" -> handleGetPosition(sender, args);
-            case "heal", "healplayer" -> handleHeal(sender, args);
-            case "feed", "feedplayer" -> handleFeed(sender, args);
-            case "help", "?", "commands" -> showHelp(sender);
+            case "createduel" -> handleMakeDuel(sender, args);
+            case "addarena" -> handleAddArena(sender);
+            case "reload" -> handleReload(sender);
+            case "resetall" -> handleResetAll(sender);
+            case "resetplayer" -> handleResetPlayer(sender, args);
+            case "setelo" -> handleSetElo(sender, args);
+            case "addelo" -> handleAddElo(sender, args);
+            case "arenainfo" -> handleArenaInfo(sender);
+            case "resetarena" -> handleResetArena(sender, args);
+            case "stats" -> handleStats(sender);
+            case "debug" -> handleDebug(sender);
+            case "endduel" -> handleEndDuel(sender, args);
+            case "tp" -> handleTeleport(sender, args);
+            case "getpos" -> handleGetPosition(sender, args);
+            case "heal" -> handleHeal(sender, args);
+            case "feed" -> handleFeed(sender, args);
+            case "help" -> showHelp(sender);
             default -> {
                 sender.sendMessage(DANGER + "✖ " + MUTED + "Unknown subcommand. Use /eradmin help");
                 return true;
@@ -200,15 +198,14 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         int inUse = (int) arenas.stream().filter(ArenaManager.Arena::isInUse).count();
         int available = total - inUse;
 
+        sender.sendMessage("----------------");
+        sender.sendMessage("  Arena Information  ");
+        sender.sendMessage("----------------");
         sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "       Arena Information      " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        sender.sendMessage("");
-        sender.sendMessage(INFO + "  📊 Total:    " + ACCENT + total);
-        sender.sendMessage(INFO + "  ✅ Available: " + SUCCESS + available);
-        sender.sendMessage(INFO + "  ❌ In Use:   " + DANGER + inUse);
-        sender.sendMessage(INFO + "  🌍 World:    " + ACCENT + plugin.getArenaManager().getWorldName());
+        sender.sendMessage(INFO + "  Total:    " + ACCENT + total);
+        sender.sendMessage(INFO + "  Available: " + SUCCESS + available);
+        sender.sendMessage(INFO + "  In Use:   " + DANGER + inUse);
+        sender.sendMessage(INFO + "  World:    " + ACCENT + plugin.getArenaManager().getWorldName());
         sender.sendMessage("");
 
         // Show individual arenas
@@ -220,9 +217,25 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("");
     }
 
-    private void handleForceResetArena(CommandSender sender, String[] args) {
+    private void handleStats(CommandSender sender) {
+        int totalPlayers = plugin.getEloManager().getTotalPlayers();
+        int totalArenas = plugin.getArenaManager().getArenas().size();
+        int activeDuels = plugin.getDuelManager().getActiveDuelCount();
+
+        sender.sendMessage("----------------");
+        sender.sendMessage("  Plugin Stats  ");
+        sender.sendMessage("----------------");
+        sender.sendMessage("");
+        sender.sendMessage(INFO + "  Total Players: " + ACCENT + totalPlayers);
+        sender.sendMessage(INFO + "  Total Arenas:  " + ACCENT + totalArenas);
+        sender.sendMessage(INFO + "  Active Duels: " + ACCENT + activeDuels);
+        sender.sendMessage(INFO + "  Version:      " + ACCENT + plugin.getDescription().getVersion());
+        sender.sendMessage("");
+    }
+
+    private void handleResetArena(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin forcereset <arenaId>");
+            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin resetarena <id>");
             return;
         }
 
@@ -234,32 +247,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        plugin.getArenaManager().freeArena(arenaId);
-        sender.sendMessage(SUCCESS + "✓ " + INFO + "Force reset arena " + ACCENT + arenaId);
-    }
-
-    private void handleStats(CommandSender sender) {
-        int totalPlayers = plugin.getEloManager().getTotalPlayers();
-        var arenas = plugin.getArenaManager().getArenas();
-        int totalArenas = arenas.size();
-        long activeDuels = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> plugin.getDuelManager().hasActiveDuel(p.getUniqueId()))
-                .count() / 2; // Each duel has 2 players
-
-        sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "        Plugin Stats         " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        sender.sendMessage("");
-        sender.sendMessage(INFO + "  👥 Total Players: " + ACCENT + totalPlayers);
-        sender.sendMessage(INFO + "  🏟️  Total Arenas:  " + ACCENT + totalArenas);
-        sender.sendMessage(INFO + "  ⚔️  Active Duels: " + ACCENT + activeDuels);
-        sender.sendMessage(INFO + "  🌍 Version:      " + ACCENT + plugin.getDescription().getVersion());
-        sender.sendMessage("");
+        plugin.getArenaManager().resetArena(arenaId);
+        sender.sendMessage(SUCCESS + "✓ " + INFO + "Reset arena " + ACCENT + arenaId);
     }
 
     private void handleDebug(CommandSender sender) {
-        sender.sendMessage(DEBUG + "═══ EloRanks Debug Info ═══");
+        sender.sendMessage("=== EloRanks Debug Info ===");
         sender.sendMessage(INFO + "Plugin: " + plugin.getDescription().getName());
         sender.sendMessage(INFO + "Version: " + plugin.getDescription().getVersion());
         sender.sendMessage(INFO + "Data Folder: " + plugin.getDataFolder().getAbsolutePath());
@@ -292,9 +285,6 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        UUID opponentUuid = plugin.getDuelManager().getDuelOpponent(target.getUniqueId());
-        Player opponent = Bukkit.getPlayer(opponentUuid);
-
         // End duel without winner (cancel)
         plugin.getDuelManager().cancelDuel(target.getUniqueId());
 
@@ -303,22 +293,24 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
 
     private void handleTeleport(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin tp [player] [arenaId]");
+            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin tp <place> [player]");
+            sender.sendMessage(MUTED + "  Places: <arenaId>, overworld, nether, end");
             return;
         }
 
+        String place = args[1].toLowerCase();
         Player target;
-        int arenaId = -1;
-
+        
+        // Determine target player
         if (args.length >= 3) {
-            try {
-                arenaId = Integer.parseInt(args[2]);
-            } catch (NumberFormatException e) {
-                sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid arena ID!");
+            // Player specified
+            target = Bukkit.getPlayer(args[2]);
+            if (target == null) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Player not found!");
                 return;
             }
-            target = Bukkit.getPlayer(args[1]);
         } else {
+            // Use executor
             if (sender instanceof Player) {
                 target = (Player) sender;
             } else {
@@ -327,44 +319,71 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        if (target == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Player not found!");
-            return;
-        }
+        // Check if it's an arena or world
+        try {
+            int arenaId = Integer.parseInt(place);
+            // It's an arena
+            Collection<ArenaManager.Arena> arenas = plugin.getArenaManager().getArenas();
+            ArenaManager.Arena arena = null;
 
-        Collection<ArenaManager.Arena> arenas = plugin.getArenaManager().getArenas();
-        ArenaManager.Arena arena = null;
-
-        if (arenaId >= 0) {
             for (var a : arenas) {
                 if (a.getId() == arenaId) {
                     arena = a;
                     break;
                 }
             }
-        } else {
-            // Get random available arena
-            for (var a : arenas) {
-                if (!a.isInUse()) {
-                    arena = a;
-                    break;
+
+            if (arena == null) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Arena not found!");
+                return;
+            }
+
+            Location spawn = arena.getSpawn1() != null ? arena.getSpawn1() : arena.getSpawn2();
+            if (spawn == null) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Arena has no spawn points!");
+                return;
+            }
+
+            target.teleport(spawn);
+            sender.sendMessage(SUCCESS + "✓ " + INFO + "Teleported " + ACCENT + target.getName() + INFO + " to arena " + ACCENT + arenaId);
+            return;
+        } catch (NumberFormatException e) {
+            // It's not an arena ID, check for worlds
+        }
+
+        // Check for world names
+        World targetWorld;
+        switch (place) {
+            case "overworld", "world" -> {
+                targetWorld = Bukkit.getWorld("world");
+                if (targetWorld == null) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "Overworld not found!");
+                    return;
                 }
+            }
+            case "nether" -> {
+                targetWorld = Bukkit.getWorld("world_nether");
+                if (targetWorld == null) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "Nether not found!");
+                    return;
+                }
+            }
+            case "end", "the_end" -> {
+                targetWorld = Bukkit.getWorld("world_the_end");
+                if (targetWorld == null) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "End not found!");
+                    return;
+                }
+            }
+            default -> {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid place! Use: arena ID, overworld, nether, or end");
+                return;
             }
         }
 
-        if (arena == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "No available arenas!");
-            return;
-        }
-
-        Location spawn = arena.getSpawn1() != null ? arena.getSpawn1() : arena.getSpawn2();
-        if (spawn == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Arena has no spawn points!");
-            return;
-        }
-
-        target.teleport(spawn);
-        sender.sendMessage(SUCCESS + "✓ " + INFO + "Teleported " + ACCENT + target.getName() + INFO + " to arena " + ACCENT + arena.getId());
+        // Teleport to world spawn
+        target.teleport(targetWorld.getSpawnLocation());
+        sender.sendMessage(SUCCESS + "✓ " + INFO + "Teleported " + ACCENT + target.getName() + INFO + " to " + place);
     }
 
     private void handleGetPosition(CommandSender sender, String[] args) {
@@ -444,26 +463,25 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(CommandSender sender) {
+        sender.sendMessage("----------------");
+        sender.sendMessage("  Admin Help  ");
+        sender.sendMessage("----------------");
         sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "     EloRanks Admin Help    " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        sender.sendMessage("");
-        sender.sendMessage(INFO + "  ⚔️  makeduel <p1> <p2> [f]" + MUTED + "    - Create duel (f=true instant)");
-        sender.sendMessage(INFO + "  🏟️  addarena" + MUTED + "                    - Add new arena");
-        sender.sendMessage(INFO + "  🔄 reload" + MUTED + "                   - Reload config");
-        sender.sendMessage(INFO + "  🗑️  resetall" + MUTED + "                  - Reset all player data");
-        sender.sendMessage(INFO + "  👤 resetplayer <p>" + MUTED + "           - Reset player stats");
-        sender.sendMessage(INFO + "  ⚡ setelo <p> <elo>" + MUTED + "            - Set player Elo");
-        sender.sendMessage(INFO + "  ➕ adde <p> <amt>" + MUTED + "              - Add Elo to player");
-        sender.sendMessage(INFO + "  ℹ️  arenainfo" + MUTED + "                 - Show arena info");
-        sender.sendMessage(INFO + "  🔧 forcereset <id>" + MUTED + "           - Force reset arena");
-        sender.sendMessage(INFO + "  ⏹️  endduel <p>" + MUTED + "                - End player's duel");
-        sender.sendMessage(INFO + "  📍 tp <p>" + MUTED + "                    - Teleport to arena");
-        sender.sendMessage(INFO + "  📊 stats" + MUTED + "                    - Plugin statistics");
-        sender.sendMessage(INFO + "  🐛 debug" + MUTED + "                    - Debug info");
-        sender.sendMessage(INFO + "  💚 heal <p>" + MUTED + "                   - Heal player");
-        sender.sendMessage(INFO + "  🍖 feed <p>" + MUTED + "                  - Feed player");
+        sender.sendMessage(INFO + "  ⚔️  createduel <p1> <p2> [f]" + MUTED + "  - Create duel (f=true instant)");
+        sender.sendMessage(INFO + "  🏟️  addarena" + MUTED + "                  - Add new arena");
+        sender.sendMessage(INFO + "  🔄 reload" + MUTED + "                 - Reload config");
+        sender.sendMessage(INFO + "  🗑️  resetall" + MUTED + "                - Reset all player data");
+        sender.sendMessage(INFO + "  👤 resetplayer <p>" + MUTED + "         - Reset player stats");
+        sender.sendMessage(INFO + "  ⚡ setelo <p> <elo>" + MUTED + "          - Set player Elo");
+        sender.sendMessage(INFO + "  ➕ addelo <p> <amt>" + MUTED + "           - Add Elo to player");
+        sender.sendMessage(INFO + "  ℹ️  arenainfo" + MUTED + "                - Show arena info");
+        sender.sendMessage(INFO + "  🔧 resetarena <id>" + MUTED + "          - Reset arena");
+        sender.sendMessage(INFO + "  ⏹️  endduel <p>" + MUTED + "              - End player's duel");
+        sender.sendMessage(INFO + "  📍 tp <place> [p]" + MUTED + "            - Teleport (arena/overworld/nether/end)");
+        sender.sendMessage(INFO + "  📊 stats" + MUTED + "                  - Plugin statistics");
+        sender.sendMessage(INFO + "  🐛 debug" + MUTED + "                  - Debug info");
+        sender.sendMessage(INFO + "  💚 heal <p>" + MUTED + "                 - Heal player");
+        sender.sendMessage(INFO + "  🍖 feed <p>" + MUTED + "                - Feed player");
         sender.sendMessage("");
     }
 
@@ -473,72 +491,130 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return List.of();
         }
 
-        List<String> subcommands = List.of(
-            "makeduel", "forceduel", "startduel",
-            "addarena", "newarena", "createarena",
-            "reload", "rl", "reloadconfig",
-            "resetall", "resettop", "cleardata", "wipedata",
-            "resetplayer", "resetstats", "resetp",
-            "setelo", "setrating",
-            "adde", "addelo", "addrating",
-            "arenainfo", "arenas", "arenastatus",
-            "forcereset", "resetarena", "cleararena",
-            "stats", "statistics", "plstats",
-            "debug", "dbg", "diag",
-            "endduel", "stopduel", "cancelduel",
-            "tparena", "gotoarena", "arenatp",
-            "getpos", "position", "arenapos",
-            "heal", "healplayer",
-            "feed", "feedplayer",
-            "help", "?", "commands"
-        );
-
-        if (args.length == 0) {
-            return subcommands;
+        // Return full subcommand list for first argument
+        if (args.length == 1) {
+            String current = args[0].toLowerCase();
+            List<String> subcommands = List.of(
+                "createduel",
+                "addarena",
+                "reload",
+                "resetall",
+                "resetplayer",
+                "setelo",
+                "addelo",
+                "arenainfo",
+                "resetarena",
+                "stats",
+                "debug",
+                "endduel",
+                "tp",
+                "getpos",
+                "heal",
+                "feed",
+                "help"
+            );
+            if (current.isEmpty()) {
+                return subcommands;
+            }
+            return subcommands.stream()
+                .filter(s -> s.toLowerCase().startsWith(current))
+                .collect(Collectors.toList());
         }
 
+        // Second argument - different based on subcommand
+        String sub = args[0].toLowerCase();
         String current = args[args.length - 1].toLowerCase();
-        
-        // Match subcommands
-        List<String> matches = subcommands.stream()
-            .filter(s -> s.toLowerCase().startsWith(current))
-            .collect(Collectors.toList());
+        List<String> matches = new ArrayList<>();
 
-        // Add player names for certain subcommands
-        if (args.length >= 2) {
-            String sub = args[0].toLowerCase();
-            if (sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel") ||
-                sub.equals("resetplayer") || sub.equals("resetstats") || sub.equals("resetp") ||
-                sub.equals("setelo") || sub.equals("setrating") ||
-                sub.equals("adde") || sub.equals("addelo") || sub.equals("addrating") ||
-                sub.equals("endduel") || sub.equals("stopduel") || sub.equals("cancelduel") ||
-                sub.equals("tparena") || sub.equals("gotoarena") || sub.equals("arenatp") ||
-                sub.equals("heal") || sub.equals("healplayer") ||
-                sub.equals("feed") || sub.equals("feedplayer")) {
-                
-                // Add online player names
+        // Commands that need player argument
+        if (sub.equals("createduel") ||
+            sub.equals("resetplayer") ||
+            sub.equals("setelo") ||
+            sub.equals("addelo") ||
+            sub.equals("endduel") ||
+            sub.equals("heal") ||
+            sub.equals("feed")) {
+            if (args.length == 2) {
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.getName().toLowerCase().startsWith(current)) {
+                    if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
                         matches.add(p.getName());
                     }
                 }
             }
-            
-            // Add arena IDs for forcereset
-            if (sub.equals("forcereset") || sub.equals("resetarena") || sub.equals("cleararena") ||
-                sub.equals("getpos") || sub.equals("position") || sub.equals("arenapos")) {
+            // Add "true" for createduel third arg
+            if (sub.equals("createduel") && args.length == 3) {
+                if (current.isEmpty() || "true".startsWith(current)) {
+                    matches.add("true");
+                }
+            }
+        }
+
+        // Commands that need arena ID or world
+        if (sub.equals("resetarena") ||
+            sub.equals("getpos")) {
+            if (args.length == 2) {
                 for (var arena : plugin.getArenaManager().getArenas()) {
                     String id = String.valueOf(arena.getId());
-                    if (id.startsWith(current)) {
+                    if (current.isEmpty() || id.startsWith(current)) {
                         matches.add(id);
                     }
                 }
             }
-            
-            // Add "true" for makeduel force argument
-            if ((sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel")) && args.length == 3) {
-                if ("true".startsWith(current)) {
-                    matches.add("true");
+        }
+
+        // TP command - args[1] = place (arena ID or world), args[2] = optional player
+        if (sub.equals("tp") && args.length == 2) {
+            // Add arena IDs
+            for (var arena : plugin.getArenaManager().getArenas()) {
+                String id = String.valueOf(arena.getId());
+                if (current.isEmpty() || id.startsWith(current)) {
+                    matches.add(id);
+                }
+            }
+            // Add world names
+            List.of("overworld", "nether", "end").forEach(world -> {
+                if (current.isEmpty() || world.startsWith(current)) {
+                    matches.add(world);
+                }
+            });
+        }
+
+        // For tp with 2 args where first arg is not a number - add player names
+        if (sub.equals("tp") && args.length == 3) {
+            // args[2] should be player name
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
+                    matches.add(p.getName());
+                }
+            }
+        }
+
+        // Also for tparena backwards compatibility
+        if (sub.equals("tparena")) {
+            if (args.length == 2) {
+                for (var arena : plugin.getArenaManager().getArenas()) {
+                    String id = String.valueOf(arena.getId());
+                    if (current.isEmpty() || id.startsWith(current)) {
+                        matches.add(id);
+                    }
+                }
+            } else if (args.length == 3) {
+                for (var arena : plugin.getArenaManager().getArenas()) {
+                    String id = String.valueOf(arena.getId());
+                    if (current.isEmpty() || id.startsWith(current)) {
+                        matches.add(id);
+                    }
+                }
+            }
+            if (args.length == 2) {
+                try {
+                    Integer.parseInt(args[1]);
+                } catch (NumberFormatException e) {
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
+                            matches.add(p.getName());
+                        }
+                    }
                 }
             }
         }
