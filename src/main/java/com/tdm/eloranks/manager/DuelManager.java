@@ -474,6 +474,13 @@ public class DuelManager {
     }
     
     /**
+     * Check if player is in pending duel (countdown phase).
+     */
+    public boolean isInPendingDuel(UUID uuid) {
+        return pendingDuels.containsKey(uuid);
+    }
+    
+    /**
      * Decrement pending duel countdowns for all pending duels.
      * Called by scoreboard updater.
      */
@@ -642,11 +649,76 @@ public class DuelManager {
             return;
         }
         
-        // Save inventories
+        // Save inventories and locations FIRST, before any teleport or countdown
         savePlayerInventory(player1);
         savePlayerInventory(player2);
         
-        // Apply UHC kit
+        // Send pre-duel instructions
+        sendPreDuelInstructionsPreTeleport(player1, player2, arena);
+        
+        // Start countdown BEFORE teleport (gives players time to react)
+        startPreTeleportCountdown(player1, player2, arena);
+    }
+    
+    /**
+     * Send pre-duel instructions BEFORE teleport.
+     */
+    private void sendPreDuelInstructionsPreTeleport(Player player1, Player player2, ArenaManager.Arena arena) {
+        player1.sendMessage("");
+        player1.sendMessage(PRIMARY + "╔════════════════════════════════════════════════╗");
+        player1.sendMessage(PRIMARY + "║" + ACCENT + "              📋 DUEL INSTRUCTIONS             " + PRIMARY + "║");
+        player1.sendMessage(PRIMARY + "╚════════════════════════════════════════════════╝");
+        player1.sendMessage("");
+        player1.sendMessage(INFO + "  🎯 " + MUTED + "Opponent: " + ACCENT + player2.getName());
+        player1.sendMessage(INFO + "  🏟️  " + MUTED + "Arena: " + arena.getId());
+        
+        player2.sendMessage("");
+        player2.sendMessage(PRIMARY + "╔════════════════════════════════════════════════╗");
+        player2.sendMessage(PRIMARY + "║" + ACCENT + "              📋 DUEL INSTRUCTIONS             " + PRIMARY + "║");
+        player2.sendMessage(PRIMARY + "╚════════════════════════════════════════════════╝");
+        player2.sendMessage("");
+        player2.sendMessage(INFO + "  🎯 " + MUTED + "Opponent: " + ACCENT + player1.getName());
+        player2.sendMessage(INFO + "  🏟️  " + MUTED + "Arena: " + arena.getId());
+    }
+    
+    /**
+     * Start countdown BEFORE teleporting to arena.
+     */
+    private void startPreTeleportCountdown(Player player1, Player player2, ArenaManager.Arena arena) {
+        CountdownManager countdown = plugin.getCountdownManager();
+        
+        // Track pending duels for scoreboard countdown display
+        int teleportSeconds = configManager.getTeleportCountdownSeconds();
+        int duelSeconds = configManager.getDuelStartCountdownSeconds();
+        int totalCountdown = teleportSeconds + duelSeconds;
+        
+        pendingDuels.put(player1.getUniqueId(), totalCountdown);
+        pendingDuels.put(player2.getUniqueId(), totalCountdown);
+        
+        // Show pre-teleport countdown
+        countdown.startTeleportCountdown(player1, player2, () -> {
+            // After teleport countdown, teleport and start duel countdown
+            finishDuelStart(player1, player2, arena);
+        });
+    }
+    
+    /**
+     * Actually teleport and start duel (called after pre-teleport countdown).
+     */
+    private void finishDuelStart(Player player1, Player player2, ArenaManager.Arena arena) {
+        // Check if players are still online and duel wasn't cancelled
+        if (!player1.isOnline() || !player2.isOnline() || 
+            !hasActiveDuel(player1.getUniqueId()) || !hasActiveDuel(player2.getUniqueId())) {
+            // One of the players is no longer in a duel, cancel
+            pendingDuels.remove(player1.getUniqueId());
+            pendingDuels.remove(player2.getUniqueId());
+            return;
+        }
+        
+        Location spawn1 = arena.getSpawn1();
+        Location spawn2 = arena.getSpawn2();
+        
+        // Apply UHC kit AFTER countdown, just before teleport
         applyUHCKit(player1);
         applyUHCKit(player2);
         
@@ -672,7 +744,7 @@ public class DuelManager {
         activeDuels.put(player1.getUniqueId(), player2.getUniqueId());
         activeDuels.put(player2.getUniqueId(), player1.getUniqueId());
         
-        // Send instructions to both players before countdown
+        // Send instructions for after teleport
         sendPreDuelInstructions(player1, player2, arena);
         
         // Start duel countdown (20 seconds before FIGHT!)
@@ -684,14 +756,6 @@ public class DuelManager {
      */
     private void sendPreDuelInstructions(Player player1, Player player2, ArenaManager.Arena arena) {
         // Instructions for player 1
-        player1.sendMessage("");
-        player1.sendMessage(PRIMARY + "╔════════════════════════════════════════════════╗");
-        player1.sendMessage(PRIMARY + "║" + ACCENT + "              📋 DUEL INSTRUCTIONS             " + PRIMARY + "║");
-        player1.sendMessage(PRIMARY + "╚════════════════════════════════════════════════╝");
-        player1.sendMessage("");
-        player1.sendMessage(INFO + "  🎯 " + MUTED + "Opponent: " + ACCENT + player2.getName());
-        player1.sendMessage(INFO + "  🏟️  " + MUTED + "Arena: " + arena.getId());
-        player1.sendMessage(INFO + "  ⏱️  " + MUTED + "Get ready - 20 second countdown!");
         player1.sendMessage("");
         player1.sendMessage(ACCENT + "  📦 Kit includes:");
         player1.sendMessage(MUTED + "    • Diamond Sword & Bow");
@@ -705,14 +769,6 @@ public class DuelManager {
         player1.sendMessage("");
         
         // Instructions for player 2
-        player2.sendMessage("");
-        player2.sendMessage(PRIMARY + "╔════════════════════════════════════════════════╗");
-        player2.sendMessage(PRIMARY + "║" + ACCENT + "              📋 DUEL INSTRUCTIONS             " + PRIMARY + "║");
-        player2.sendMessage(PRIMARY + "╚════════════════════════════════════════════════╝");
-        player2.sendMessage("");
-        player2.sendMessage(INFO + "  🎯 " + MUTED + "Opponent: " + ACCENT + player1.getName());
-        player2.sendMessage(INFO + "  🏟️  " + MUTED + "Arena: " + arena.getId());
-        player2.sendMessage(INFO + "  ⏱️  " + MUTED + "Get ready - 20 second countdown!");
         player2.sendMessage("");
         player2.sendMessage(ACCENT + "  📦 Kit includes:");
         player2.sendMessage(MUTED + "    • Diamond Sword & Bow");
