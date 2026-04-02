@@ -195,23 +195,24 @@ public class ScoreboardManager {
         String opponentInfo = getOpponentInfo(player);
         
         // Set scoreboard entries with proper color handling
+        // Note: The animated title is already set as the objective display name above
+        // Do NOT add it as a separate entry - that causes color code artifacts
         setScoreboardEntry(objective, "§7§m-----------------", 12);
-        setScoreboardEntry(objective, animatedTitle, 11);  // Use stored title
-        setScoreboardEntry(objective, "§6✦ §eRank §6✦", 10);
-        setScoreboardEntry(objective, "  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers(), 9);
-        setScoreboardEntry(objective, " ", 8);
-        setScoreboardEntry(objective, "§6⚔ §eElo §6⚔", 7);
-        setScoreboardEntry(objective, "  §e" + elo, 6);
-        setScoreboardEntry(objective, "  ", 5);
-        setScoreboardEntry(objective, "§6🌍 §eWorld §6🌍", 4);
-        setScoreboardEntry(objective, "  §e" + worldName, 3);
+        setScoreboardEntry(objective, "§6✦ §eRank §6✦", 11);
+        setScoreboardEntry(objective, "  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers(), 10);
+        setScoreboardEntry(objective, " ", 9);
+        setScoreboardEntry(objective, "§6⚔ §eElo §6⚔", 8);
+        setScoreboardEntry(objective, "  §e" + elo, 7);
+        setScoreboardEntry(objective, "  ", 6);
+        setScoreboardEntry(objective, "§6🌍 §eWorld §6🌍", 5);
+        setScoreboardEntry(objective, "  §e" + worldName, 4);
         
         // Show opponent info if in duel
         if (opponentInfo != null) {
-            setScoreboardEntry(objective, "§c§l⚔ §eVS §c⚔", 2);
-            setScoreboardEntry(objective, "  §e" + opponentInfo, 1);
+            setScoreboardEntry(objective, "§c§l⚔ §eVS §c⚔", 3);
+            setScoreboardEntry(objective, "  §e" + opponentInfo, 2);
         } else {
-            setScoreboardEntry(objective, "§7§m-----------------", 2);
+            setScoreboardEntry(objective, "§7§m-----------------", 3);
         }
         
         // Use the scoreboard with team prefixes (nametags) if available, otherwise use current
