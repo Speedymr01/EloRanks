@@ -21,15 +21,8 @@ public class ScoreboardManager {
     private final EloRanks plugin;
     private final EloManager eloManager;
     
-    // Animated title frames
-    private final String[] titleFrames = {
-        "§b§lE§r§el§r§bo§r§el§r§bR§r§ea§r§bn§r§bk§r§bs",
-        "§e§lE§r§dl§r§eo§r§dl§r§eR§r§da§r§en§r§dk§r§bs",
-        "§a§lE§r§dl§r§co§r§dl§r§cR§r§da§r§en§r§dk§r§bs",
-        "§c§lE§r§da§r§eL§r§do§r§eR§r§ca§r§en§r§dk§r§es",
-        "§d§lE§r§da§r§bL§r§co§r§bR§r§ca§r§bn§r§dk§r§bs",
-    };
-    private int currentFrame = 0;
+    // Static title (no animation)
+    private static final String TITLE = "§b§lEloRanks";
     
     // Track active bossbars for duel players
     private final Map<UUID, BossBar> activeBossBars = new HashMap<>();
@@ -156,12 +149,12 @@ public class ScoreboardManager {
         // Get or create scoreboard - always create fresh to avoid issues
         scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
         
-        // Get animated title ONCE and reuse it
-        String animatedTitle = getAnimatedTitleOnce();
+        // Get static title
+        String title = getTitle();
         
-        // Create new objective with animated title
+        // Create new objective with title
         objective = scoreboard.registerNewObjective("eloranks", "dummy", 
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(animatedTitle));
+            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(title));
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         
         // Get player data
@@ -175,65 +168,37 @@ public class ScoreboardManager {
         // Get opponent info if in duel
         String opponentInfo = getOpponentInfo(player);
         
-        // Set scoreboard entries using fixed entry names (no color codes in names)
-        // Use display name for colored text
+        // Set scoreboard entries - use simple text without complex team prefixes
+        // Scores go from high to low (15 at top)
         int score = 15;
         
         // Divider top
-        objective.getScoreboard().registerNewTeam("t1").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("§7§m-----------------"));
-        objective.getScoreboard().getTeam("t1").addEntry("divider_top");
-        objective.getScore("divider_top").setScore(score--);
+        objective.getScore("§7§m-----------------").setScore(score--);
         
         // Rank section
-        objective.getScoreboard().registerNewTeam("t2").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("§6✦ §eRank §6✦"));
-        objective.getScoreboard().getTeam("t2").addEntry("rank_label");
-        objective.getScore("rank_label").setScore(score--);
-        
-        objective.getScoreboard().registerNewTeam("t3").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers()));
-        objective.getScoreboard().getTeam("t3").addEntry("rank_value");
-        objective.getScore("rank_value").setScore(score--);
+        objective.getScore("§6✦ §eRank §6✦").setScore(score--);
+        objective.getScore("  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers()).setScore(score--);
         
         // Empty line
-        objective.getScoreboard().registerNewTeam("t4").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(" "));
-        objective.getScoreboard().getTeam("t4").addEntry("empty1");
-        objective.getScore("empty1").setScore(score--);
+        objective.getScore(" ").setScore(score--);
         
         // Elo section
-        objective.getScoreboard().registerNewTeam("t5").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("§6⚔ §eElo §6⚔"));
-        objective.getScoreboard().getTeam("t5").addEntry("elo_label");
-        objective.getScore("elo_label").setScore(score--);
-        
-        objective.getScoreboard().registerNewTeam("t6").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("  §e" + elo));
-        objective.getScoreboard().getTeam("t6").addEntry("elo_value");
-        objective.getScore("elo_value").setScore(score--);
+        objective.getScore("§6⚔ §eElo §6⚔").setScore(score--);
+        objective.getScore("  §e" + elo).setScore(score--);
         
         // Empty line
-        objective.getScoreboard().registerNewTeam("t7").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("  "));
-        objective.getScoreboard().getTeam("t7").addEntry("empty2");
-        objective.getScore("empty2").setScore(score--);
+        objective.getScore("  ").setScore(score--);
         
         // World section
-        objective.getScoreboard().registerNewTeam("t8").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("§6🌍 §eWorld §6🌍"));
-        objective.getScoreboard().getTeam("t8").addEntry("world_label");
-        objective.getScore("world_label").setScore(score--);
-        
-        objective.getScoreboard().registerNewTeam("t9").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("  §e" + worldName));
-        objective.getScoreboard().getTeam("t9").addEntry("world_value");
-        objective.getScore("world_value").setScore(score--);
+        objective.getScore("§6🌍 §eWorld §6🌍").setScore(score--);
+        objective.getScore("  §e" + worldName).setScore(score--);
         
         // Divider or VS section
         if (opponentInfo != null) {
-            objective.getScoreboard().registerNewTeam("t10").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("§c§l⚔ §eVS §c⚔"));
-            objective.getScoreboard().getTeam("t10").addEntry("vs_label");
-            objective.getScore("vs_label").setScore(score--);
-            
-            objective.getScoreboard().registerNewTeam("t11").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("  §e" + opponentInfo));
-            objective.getScoreboard().getTeam("t11").addEntry("vs_value");
-            objective.getScore("vs_value").setScore(score--);
+            objective.getScore("§c§l⚔ §eVS §c⚔").setScore(score--);
+            objective.getScore("  §e" + opponentInfo).setScore(score--);
         } else {
-            objective.getScoreboard().registerNewTeam("t12").prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize("§7§m-----------------"));
-            objective.getScoreboard().getTeam("t12").addEntry("divider_bottom");
-            objective.getScore("divider_bottom").setScore(score--);
+            objective.getScore("§7§m-----------------").setScore(score--);
         }
         
         // Assign scoreboard to player
@@ -241,13 +206,10 @@ public class ScoreboardManager {
     }
     
     /**
-     * Get animated title - cycles through colors (called once per update cycle).
+     * Get static title.
      */
-    private int titleFrameCounter = 0;
-    
-    private String getAnimatedTitleOnce() {
-        titleFrameCounter = (titleFrameCounter + 1) % titleFrames.length;
-        return titleFrames[titleFrameCounter];
+    private String getTitle() {
+        return TITLE;
     }
     
     /**
