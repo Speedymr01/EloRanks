@@ -58,7 +58,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "setelo" -> handleSetElo(sender, args);
             case "addelo" -> handleAddElo(sender, args);
             case "arenainfo" -> handleArenaInfo(sender);
-            case "resetarena" -> handleForceResetArena(sender, args);
+            case "resetarena" -> handleResetArena(sender, args);
             case "stats" -> handleStats(sender);
             case "debug" -> handleDebug(sender);
             case "endduel" -> handleEndDuel(sender, args);
@@ -200,15 +200,14 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         int inUse = (int) arenas.stream().filter(ArenaManager.Arena::isInUse).count();
         int available = total - inUse;
 
+        sender.sendMessage("----------------");
+        sender.sendMessage("  Arena Information  ");
+        sender.sendMessage("----------------");
         sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "       Arena Information      " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        sender.sendMessage("");
-        sender.sendMessage(INFO + "  📊 Total:    " + ACCENT + total);
-        sender.sendMessage(INFO + "  ✅ Available: " + SUCCESS + available);
-        sender.sendMessage(INFO + "  ❌ In Use:   " + DANGER + inUse);
-        sender.sendMessage(INFO + "  🌍 World:    " + ACCENT + plugin.getArenaManager().getWorldName());
+        sender.sendMessage(INFO + "  Total:    " + ACCENT + total);
+        sender.sendMessage(INFO + "  Available: " + SUCCESS + available);
+        sender.sendMessage(INFO + "  In Use:   " + DANGER + inUse);
+        sender.sendMessage(INFO + "  World:    " + ACCENT + plugin.getArenaManager().getWorldName());
         sender.sendMessage("");
 
         // Show individual arenas
@@ -220,9 +219,25 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("");
     }
 
-    private void handleForceResetArena(CommandSender sender, String[] args) {
+    private void handleStats(CommandSender sender) {
+        int totalPlayers = plugin.getEloManager().getTotalPlayers();
+        int totalArenas = plugin.getArenaManager().getArenas().size();
+        int activeDuels = plugin.getDuelManager().getActiveDuelCount();
+
+        sender.sendMessage("----------------");
+        sender.sendMessage("  Plugin Stats  ");
+        sender.sendMessage("----------------");
+        sender.sendMessage("");
+        sender.sendMessage(INFO + "  Total Players: " + ACCENT + totalPlayers);
+        sender.sendMessage(INFO + "  Total Arenas:  " + ACCENT + totalArenas);
+        sender.sendMessage(INFO + "  Active Duels: " + ACCENT + activeDuels);
+        sender.sendMessage(INFO + "  Version:      " + ACCENT + plugin.getDescription().getVersion());
+        sender.sendMessage("");
+    }
+
+    private void handleResetArena(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin forcereset <arenaId>");
+            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin resetarena <id>");
             return;
         }
 
@@ -234,32 +249,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        plugin.getArenaManager().freeArena(arenaId);
-        sender.sendMessage(SUCCESS + "✓ " + INFO + "Force reset arena " + ACCENT + arenaId);
-    }
-
-    private void handleStats(CommandSender sender) {
-        int totalPlayers = plugin.getEloManager().getTotalPlayers();
-        var arenas = plugin.getArenaManager().getArenas();
-        int totalArenas = arenas.size();
-        long activeDuels = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> plugin.getDuelManager().hasActiveDuel(p.getUniqueId()))
-                .count() / 2; // Each duel has 2 players
-
-        sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "        Plugin Stats         " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        sender.sendMessage("");
-        sender.sendMessage(INFO + "  👥 Total Players: " + ACCENT + totalPlayers);
-        sender.sendMessage(INFO + "  🏟️  Total Arenas:  " + ACCENT + totalArenas);
-        sender.sendMessage(INFO + "  ⚔️  Active Duels: " + ACCENT + activeDuels);
-        sender.sendMessage(INFO + "  🌍 Version:      " + ACCENT + plugin.getDescription().getVersion());
-        sender.sendMessage("");
+        plugin.getArenaManager().resetArena(arenaId);
+        sender.sendMessage(SUCCESS + "✓ " + INFO + "Reset arena " + ACCENT + arenaId);
     }
 
     private void handleDebug(CommandSender sender) {
-        sender.sendMessage(DEBUG + "═══ EloRanks Debug Info ═══");
+        sender.sendMessage("=== EloRanks Debug Info ===");
         sender.sendMessage(INFO + "Plugin: " + plugin.getDescription().getName());
         sender.sendMessage(INFO + "Version: " + plugin.getDescription().getVersion());
         sender.sendMessage(INFO + "Data Folder: " + plugin.getDataFolder().getAbsolutePath());
@@ -473,10 +468,9 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(CommandSender sender) {
-        sender.sendMessage("");
-        sender.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        sender.sendMessage(ACCENT + "║" + PRIMARY + "     EloRanks Admin Help    " + ACCENT + "║");
-        sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        sender.sendMessage("----------------");
+        sender.sendMessage("  Admin Help  ");
+        sender.sendMessage("----------------");
         sender.sendMessage("");
         sender.sendMessage(INFO + "  ⚔️  createduel <p1> <p2> [f]" + MUTED + "  - Create duel (f=true instant)");
         sender.sendMessage(INFO + "  🏟️  addarena" + MUTED + "                  - Add new arena");

@@ -71,10 +71,9 @@ public class EloCommand implements CommandExecutor, TabCompleter {
     private void showPlayerStats(Player player, EloManager eloManager) {
         PlayerData pd = eloManager.getOrCreatePlayerData(player.getUniqueId(), player.getName());
         
-        player.sendMessage("");
-        player.sendMessage(ACCENT + "╔═══════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "   Your Elo Statistics   " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚═══════════════════════════════╝");
+        player.sendMessage("-----------");
+        player.sendMessage("  Your Elo Statistics  ");
+        player.sendMessage("-----------");
         player.sendMessage("");
         player.sendMessage(INFO + "  🏆 Rank: " + ACCENT + "#" + pd.getRank() + MUTED + " / " + eloManager.getTotalPlayers());
         player.sendMessage(INFO + "  ⚡ Elo: " + ACCENT + pd.getElo());
@@ -103,9 +102,9 @@ public class EloCommand implements CommandExecutor, TabCompleter {
         }
         
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + " " + target.getName() + "'s Statistics  " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        player.sendMessage("-------------");
+        player.sendMessage(" " + target.getName() + "'s Statistics  ");
+        player.sendMessage("-------------");
         player.sendMessage("");
         player.sendMessage(INFO + "  🏆 Rank: " + ACCENT + "#" + pd.getRank() + MUTED + " / " + eloManager.getTotalPlayers());
         player.sendMessage(INFO + "  ⚡ Elo: " + ACCENT + pd.getElo());
@@ -132,9 +131,9 @@ public class EloCommand implements CommandExecutor, TabCompleter {
         List<PlayerData> top = eloManager.getTopPlayers(count);
         
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "     Top " + count + " Players    " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        player.sendMessage("----------------");
+        player.sendMessage("     Top " + count + " Players    ");
+        player.sendMessage("----------------");
         player.sendMessage("");
         
         for (int i = 0; i < top.size(); i++) {
@@ -149,10 +148,9 @@ public class EloCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(Player player) {
-        player.sendMessage("");
-        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "      EloRanks Help     " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        player.sendMessage("----------------");
+        player.sendMessage("  EloRanks Help  ");
+        player.sendMessage("----------------");
         player.sendMessage("");
         player.sendMessage(INFO + "  /er " + MUTED + "- View your stats");
         player.sendMessage(INFO + "  /er stats " + MUTED + "- View your stats");

@@ -141,9 +141,10 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
 
     private void showHelp(Player player) {
         player.sendMessage("");
-        player.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player.sendMessage(ACCENT + "║" + PRIMARY + "      Duel Commands      " + ACCENT + "║");
-        player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
+        player.sendMessage("----------------");
+        player.sendMessage("  Duel Commands  ");
+        player.sendMessage("----------------");
+        player.sendMessage("");
         player.sendMessage("");
         player.sendMessage(INFO + "  ⚔️  /duel <player> " + MUTED + "- Challenge to 1v1");
         player.sendMessage(INFO + "  ✅ /duel request <player> " + MUTED + "- Send duel request");

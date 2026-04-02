@@ -380,23 +380,21 @@ public class DuelManager {
             int opponentRank = eloManager.getPlayerRank(opponentUuid);
             
             // Notify surrendering player
+            player.sendMessage("---------------");
+            player.sendMessage("  YOU SURRENDERED  ");
+            player.sendMessage("---------------");
             player.sendMessage("");
-            player.sendMessage(DANGER + "╔═════════════════════════════════╗");
-            player.sendMessage(DANGER + "║" + MUTED + "      🏳️ YOU SURRENDERED      " + DANGER + "║");
-            player.sendMessage(DANGER + "╚═════════════════════════════════╝");
-            player.sendMessage("");
-            player.sendMessage(MUTED + "  ⚡ " + result.loserChange + " Elo (instant loss)");
-            player.sendMessage(INFO + "  🏆 Rank: #" + playerRank + " / " + eloManager.getTotalPlayers());
+            player.sendMessage(MUTED + "  " + result.loserChange + " Elo (instant loss)");
+            player.sendMessage(INFO + "  Rank: #" + playerRank + " / " + eloManager.getTotalPlayers());
             player.sendMessage("");
             
             // Notify opponent
+            opponent.sendMessage("---------------");
+            opponent.sendMessage("  OPPONENT SURRENDERED  ");
+            opponent.sendMessage("---------------");
             opponent.sendMessage("");
-            opponent.sendMessage(SUCCESS + "╔═════════════════════════════════╗");
-            opponent.sendMessage(SUCCESS + "║" + ACCENT + "   🏆 OPPONENT SURRENDERED    " + SUCCESS + "║");
-            opponent.sendMessage(SUCCESS + "╚═════════════════════════════════╝");
-            opponent.sendMessage("");
-            opponent.sendMessage(INFO + "  ⚡ +" + result.winnerChange + " Elo");
-            opponent.sendMessage(INFO + "  🏆 Rank: #" + opponentRank + " / " + eloManager.getTotalPlayers());
+            opponent.sendMessage(INFO + "  +" + result.winnerChange + " Elo");
+            opponent.sendMessage(INFO + "  Rank: #" + opponentRank + " / " + eloManager.getTotalPlayers());
             opponent.sendMessage("");
         }
         
@@ -664,21 +662,19 @@ public class DuelManager {
      * Send pre-duel instructions BEFORE teleport.
      */
     private void sendPreDuelInstructionsPreTeleport(Player player1, Player player2, ArenaManager.Arena arena) {
+        player1.sendMessage("----------------");
+        player1.sendMessage("  DUEL INSTRUCTIONS  ");
+        player1.sendMessage("----------------");
         player1.sendMessage("");
-        player1.sendMessage(PRIMARY + "╔════════════════════════════════════════════════╗");
-        player1.sendMessage(PRIMARY + "║" + ACCENT + "              📋 DUEL INSTRUCTIONS             " + PRIMARY + "║");
-        player1.sendMessage(PRIMARY + "╚════════════════════════════════════════════════╝");
-        player1.sendMessage("");
-        player1.sendMessage(INFO + "  🎯 " + MUTED + "Opponent: " + ACCENT + player2.getName());
-        player1.sendMessage(INFO + "  🏟️  " + MUTED + "Arena: " + arena.getId());
+        player1.sendMessage(INFO + "  Opponent: " + ACCENT + player2.getName());
+        player1.sendMessage(INFO + "  Arena: " + arena.getId());
         
+        player2.sendMessage("----------------");
+        player2.sendMessage("  DUEL INSTRUCTIONS  ");
+        player2.sendMessage("----------------");
         player2.sendMessage("");
-        player2.sendMessage(PRIMARY + "╔════════════════════════════════════════════════╗");
-        player2.sendMessage(PRIMARY + "║" + ACCENT + "              📋 DUEL INSTRUCTIONS             " + PRIMARY + "║");
-        player2.sendMessage(PRIMARY + "╚════════════════════════════════════════════════╝");
-        player2.sendMessage("");
-        player2.sendMessage(INFO + "  🎯 " + MUTED + "Opponent: " + ACCENT + player1.getName());
-        player2.sendMessage(INFO + "  🏟️  " + MUTED + "Arena: " + arena.getId());
+        player2.sendMessage(INFO + "  Opponent: " + ACCENT + player1.getName());
+        player2.sendMessage(INFO + "  Arena: " + arena.getId());
     }
     
     /**
@@ -814,24 +810,22 @@ public class DuelManager {
         duelStartTimes.put(player2.getUniqueId(), System.currentTimeMillis());
         
         // Notify players
+        player1.sendMessage("---------------");
+        player1.sendMessage("  DUEL STARTED!  ");
+        player1.sendMessage("---------------");
         player1.sendMessage("");
-        player1.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player1.sendMessage(ACCENT + "║" + SUCCESS + "    ⚔️ DUEL STARTED! ⚔️    " + ACCENT + "║");
-        player1.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        player1.sendMessage("");
-        player1.sendMessage(INFO + "  🎯 vs " + ACCENT + player2.getName());
-        player1.sendMessage(INFO + "  🏟️  Arena: " + arena.getId());
-        player1.sendMessage(PRIMARY + "  ⚔️  FIGHT!");
+        player1.sendMessage(INFO + "  vs " + ACCENT + player2.getName());
+        player1.sendMessage(INFO + "  Arena: " + arena.getId());
+        player1.sendMessage(PRIMARY + "  FIGHT!");
         player1.sendMessage("");
         
+        player2.sendMessage("---------------");
+        player2.sendMessage("  DUEL STARTED!  ");
+        player2.sendMessage("---------------");
         player2.sendMessage("");
-        player2.sendMessage(ACCENT + "╔═════════════════════════════════╗");
-        player2.sendMessage(ACCENT + "║" + SUCCESS + "    ⚔️ DUEL STARTED! ⚔️    " + ACCENT + "║");
-        player2.sendMessage(ACCENT + "╚═════════════════════════════════╝");
-        player2.sendMessage("");
-        player2.sendMessage(INFO + "  🎯 vs " + ACCENT + player1.getName());
-        player2.sendMessage(INFO + "  🏟️  Arena: " + arena.getId());
-        player2.sendMessage(PRIMARY + "  ⚔️  FIGHT!");
+        player2.sendMessage(INFO + "  vs " + ACCENT + player1.getName());
+        player2.sendMessage(INFO + "  Arena: " + arena.getId());
+        player2.sendMessage(PRIMARY + "  FIGHT!");
         player2.sendMessage("");
     }
 
@@ -995,13 +989,12 @@ public class DuelManager {
                 winner.clearActivePotionEffects();
                 
                 // Win message
+                winner.sendMessage("---------------");
+                winner.sendMessage("  YOU WON!  ");
+                winner.sendMessage("---------------");
                 winner.sendMessage("");
-                winner.sendMessage(SUCCESS + "╔═════════════════════════════════╗");
-                winner.sendMessage(SUCCESS + "║" + ACCENT + "       🎉 YOU WON! 🎉       " + SUCCESS + "║");
-                winner.sendMessage(SUCCESS + "╚═════════════════════════════════╝");
-                winner.sendMessage("");
-                winner.sendMessage(INFO + "  ⚡ +" + result.winnerChange + " Elo");
-                winner.sendMessage(INFO + "  🏆 Rank: #" + winnerRank + " / " + eloManager.getTotalPlayers());
+                winner.sendMessage(INFO + "  +" + result.winnerChange + " Elo");
+                winner.sendMessage(INFO + "  Rank: #" + winnerRank + " / " + eloManager.getTotalPlayers());
                 winner.sendMessage("");
             }
             
@@ -1010,13 +1003,12 @@ public class DuelManager {
                 loser.clearActivePotionEffects();
                 
                 // Loss message
+                loser.sendMessage("---------------");
+                loser.sendMessage("  YOU LOST  ");
+                loser.sendMessage("---------------");
                 loser.sendMessage("");
-                loser.sendMessage(DANGER + "╔═════════════════════════════════╗");
-                loser.sendMessage(DANGER + "║" + MUTED + "       💀 YOU LOST 💀       " + DANGER + "║");
-                loser.sendMessage(DANGER + "╚═════════════════════════════════╝");
-                loser.sendMessage("");
-                loser.sendMessage(MUTED + "  ⚡ " + result.loserChange + " Elo");
-                loser.sendMessage(INFO + "  🏆 Rank: #" + loserRank + " / " + eloManager.getTotalPlayers());
+                loser.sendMessage(MUTED + "  " + result.loserChange + " Elo");
+                loser.sendMessage(INFO + "  Rank: #" + loserRank + " / " + eloManager.getTotalPlayers());
                 loser.sendMessage("");
             }
         }
@@ -1048,6 +1040,11 @@ public class DuelManager {
 
     public boolean hasActiveDuel(UUID uuid) {
         return activeDuels.containsKey(uuid);
+    }
+    
+    public int getActiveDuelCount() {
+        // Each duel has 2 entries, so divide by 2
+        return activeDuels.size() / 2;
     }
 
     /**
