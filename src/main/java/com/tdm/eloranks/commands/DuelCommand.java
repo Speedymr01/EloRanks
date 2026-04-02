@@ -34,6 +34,17 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // Handle /surrender command separately
+        if (label.equalsIgnoreCase("surrender") || label.equalsIgnoreCase("forfeit") || label.equalsIgnoreCase("sq")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "This command can only be used by players!");
+                return true;
+            }
+            Player player = (Player) sender;
+            plugin.getDuelManager().surrender(player);
+            return true;
+        }
+        
         if (!(sender instanceof Player)) {
             sender.sendMessage(DANGER + "✖ " + MUTED + "This command can only be used by players!");
             return true;
@@ -71,6 +82,19 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 handleDuelDecline(player, args[1]);
+                break;
+            case "match":
+            case "queue":
+            case "mm":
+                handleMatchmaking(player);
+                break;
+            case "cancel":
+            case "stop":
+                handleCancelMatchmaking(player);
+                break;
+            case "surrender":
+            case "forfeit":
+                handleSurrender(player);
                 break;
             case "help":
                 showHelp(player);
@@ -119,6 +143,21 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(INFO + "➖ " + MUTED + "You declined " + ACCENT + requester.getName() + MUTED + "'s duel request");
         requester.sendMessage(DANGER + "✖ " + ACCENT + player.getName() + MUTED + " declined your duel request");
     }
+    
+    private void handleMatchmaking(Player player) {
+        plugin.getDuelManager().toggleMatchmaking(player);
+    }
+    
+    private void handleCancelMatchmaking(Player player) {
+        plugin.getDuelManager().cancelMatchmaking(player);
+    }
+    
+    private void handleSurrender(Player player) {
+        boolean success = plugin.getDuelManager().surrender(player);
+        if (!success) {
+            // Error message handled by surrender method
+        }
+    }
 
     private void showHelp(Player player) {
         player.sendMessage("");
@@ -129,6 +168,9 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(INFO + "  ⚔️  /duel <player> " + MUTED + "- Challenge to 1v1");
         player.sendMessage(INFO + "  ✅ /duel accept <player> " + MUTED + "- Accept challenge");
         player.sendMessage(INFO + "  ❌ /duel decline <player> " + MUTED + "- Decline challenge");
+        player.sendMessage(INFO + "  🎯 /duel match " + MUTED + "- Enter matchmaking queue");
+        player.sendMessage(INFO + "  ⏹️  /duel cancel " + MUTED + "- Cancel matchmaking");
+        player.sendMessage(INFO + "  🏳️  /surrender " + MUTED + "- Forfeit (half Elo penalty)");
         player.sendMessage("");
     }
 

@@ -38,12 +38,7 @@ public class PlayerDeathListener implements Listener {
                 // Cancel death message for duel arena
                 event.setDeathMessage(null);
                 
-                // Teleport dead player to spawn or somewhere safe
-                if (plugin.getServer().getWorld("world") != null) {
-                    deadPlayer.teleport(plugin.getServer().getWorld("world").getSpawnLocation());
-                }
-                
-                // Heal both players
+                // Heal both players (restoration will handle location)
                 deadPlayer.setHealth(deadPlayer.getMaxHealth());
                 opponent.setHealth(opponent.getMaxHealth());
             }

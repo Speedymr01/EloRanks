@@ -15,6 +15,8 @@ public class PlayerData {
     private int losses;
     private int draws;
     private long lastDuelTime;
+    private int placementMatches; // Number of placement matches played (0-5)
+    private boolean placementCompleted; // Whether placement is done
 
     public PlayerData(UUID playerId, String playerName, int elo) {
         this.playerId = playerId;
@@ -25,6 +27,8 @@ public class PlayerData {
         this.losses = 0;
         this.draws = 0;
         this.lastDuelTime = 0;
+        this.placementMatches = 0;
+        this.placementCompleted = false;
     }
 
     public UUID getPlayerId() {
@@ -89,6 +93,30 @@ public class PlayerData {
 
     public int getTotalMatches() {
         return wins + losses + draws;
+    }
+    
+    public int getPlacementMatches() {
+        return placementMatches;
+    }
+    
+    public void incrementPlacementMatches() {
+        this.placementMatches++;
+    }
+    
+    public void setPlacementMatches(int matches) {
+        this.placementMatches = matches;
+    }
+    
+    public boolean isPlacementCompleted() {
+        return placementCompleted;
+    }
+    
+    public void setPlacementCompleted(boolean completed) {
+        this.placementCompleted = completed;
+    }
+    
+    public boolean isInPlacement() {
+        return !placementCompleted && placementMatches < 5;
     }
 
     public double getWinRate() {

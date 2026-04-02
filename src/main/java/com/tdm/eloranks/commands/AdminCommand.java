@@ -296,18 +296,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         Player opponent = Bukkit.getPlayer(opponentUuid);
 
         // End duel without winner (cancel)
-        if (opponent != null) {
-            plugin.getDuelManager().restorePlayerInventory(target);
-            plugin.getDuelManager().restorePlayerInventory(opponent);
-            target.clearActivePotionEffects();
-            opponent.clearActivePotionEffects();
-            plugin.getArenaManager().removePlayer(target);
-            plugin.getArenaManager().removePlayer(opponent);
-            
-            // Remove from active duels
-            plugin.getDuelManager().cancelDuel(target.getUniqueId());
-            plugin.getDuelManager().cancelDuel(opponent.getUniqueId());
-        }
+        plugin.getDuelManager().cancelDuel(target.getUniqueId());
 
         sender.sendMessage(SUCCESS + "✓ " + INFO + "Ended duel for " + ACCENT + target.getName());
     }

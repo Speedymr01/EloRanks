@@ -7,9 +7,12 @@ import com.tdm.eloranks.commands.LeaderboardCommand;
 import com.tdm.eloranks.commands.AdminCommand;
 import com.tdm.eloranks.listeners.PlayerDeathListener;
 import com.tdm.eloranks.listeners.BlockBreakListener;
+import com.tdm.eloranks.listeners.PlayerQuitListener;
 import com.tdm.eloranks.manager.EloManager;
 import com.tdm.eloranks.manager.DuelManager;
 import com.tdm.eloranks.manager.ArenaManager;
+import com.tdm.eloranks.manager.ScoreboardManager;
+import com.tdm.eloranks.manager.CountdownManager;
 import com.tdm.eloranks.config.ConfigManager;
 
 /**
@@ -25,6 +28,8 @@ public final class EloRanks extends JavaPlugin {
     private EloManager eloManager;
     private DuelManager duelManager;
     private ArenaManager arenaManager;
+    private ScoreboardManager scoreboardManager;
+    private CountdownManager countdownManager;
 
     @Override
     public void onEnable() {
@@ -52,7 +57,13 @@ public final class EloRanks extends JavaPlugin {
             configManager.getArenaSpacing()
         );
 
-        getLogger().info("[5/5] Registering commands & listeners...");
+        getLogger().info("[5/5] Loading ScoreboardManager...");
+        scoreboardManager = new ScoreboardManager(this);
+        
+        getLogger().info("[6/6] Loading CountdownManager...");
+        countdownManager = new CountdownManager(this);
+        
+        getLogger().info("[7/7] Registering commands & listeners...");
         
         // Register commands
         getCommand("er").setExecutor(new EloCommand(this));
@@ -63,10 +74,13 @@ public final class EloRanks extends JavaPlugin {
         getCommand("leaderboard").setTabCompleter(new LeaderboardCommand(this));
         getCommand("eradmin").setExecutor(new AdminCommand(this));
         getCommand("eradmin").setTabCompleter(new AdminCommand(this));
+        getCommand("surrender").setExecutor(new DuelCommand(this));  // Reuse DuelCommand for surrender
+        getCommand("surrender").setTabCompleter(new DuelCommand(this));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), this);
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
 
         getLogger().info("╔══════════════════════════════════════╗");
         getLogger().info("║  ✅ EloRanks Enabled Successfully!  ║");
@@ -108,5 +122,13 @@ public final class EloRanks extends JavaPlugin {
 
     public ArenaManager getArenaManager() {
         return arenaManager;
+    }
+    
+    public ScoreboardManager getScoreboardManager() {
+        return scoreboardManager;
+    }
+    
+    public CountdownManager getCountdownManager() {
+        return countdownManager;
     }
 }

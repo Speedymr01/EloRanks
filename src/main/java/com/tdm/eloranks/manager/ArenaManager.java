@@ -50,6 +50,10 @@ public class ArenaManager {
     private final int maxRetries = 10;
     private final AtomicInteger retryCount = new AtomicInteger(0);
     
+    // Track if arena system failed to initialize
+    private boolean arenaSystemDisabled = false;
+    private boolean arenasInitialized = false;
+    
     public ArenaManager(EloRanks plugin, String schematicName, int initialArenas, int arenaSpacing) {
         this.plugin = plugin;
         this.worldName = plugin.getConfigManager().getArenaWorld();
@@ -65,6 +69,13 @@ public class ArenaManager {
         
         // Schedule schematic loading with retry logic
         scheduleArenaInitialization();
+    }
+    
+    /**
+     * Check if arena system is available.
+     */
+    public boolean isArenaSystemAvailable() {
+        return arenasInitialized && !arenaSystemDisabled;
     }
     
     /**
@@ -101,7 +112,9 @@ public class ArenaManager {
                     scheduleArenaInitialization();
                 } else {
                     plugin.getLogger().severe("=== FAILED: Max retries reached! FAWE may not be installed ===");
-                    plugin.getLogger().severe("Please install FastAsyncWorldEdit on your server!");
+                    plugin.getLogger().severe("EloRanks will run in LIMTED MODE without arena system!");
+                    plugin.getLogger().severe("Install FastAsyncWorldEdit and restart to enable full functionality.");
+                    arenaSystemDisabled = true;
                 }
             }
         }, 20L); // Check every 1 second initially, then retry
@@ -163,6 +176,10 @@ public class ArenaManager {
         
         // Generate initial arenas
         generateArenas(initialArenas);
+        
+        // Mark as initialized
+        arenasInitialized = true;
+        plugin.getLogger().info("Arena system ready!");
     }
     
     /**

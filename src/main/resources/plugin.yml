@@ -3,16 +3,16 @@ version: 1.0.1
 main: com.tdm.eloranks.EloRanks
 api-version: 1.21
 author: TDM
-description: Competitive 1v1 Elo-Based Ranking System for Minecraft servers
+description: Competitive 1v1 Elo-Based Ranking System for Minecraft 1.21 servers with matchmaking, arenas, and dynamic K-factor
 
 commands:
   er:
-    description: View your Elo stats
+    description: View your Elo stats and rank
     usage: /<command> [stats|top|help] [player]
     aliases: [elo, elostats, erstats]
   duel:
     description: Challenge players to 1v1 duels
-    usage: /<command> <player> | accept <player> | decline <player>
+    usage: /<command> <player> | accept <player> | decline <player> | match | cancel | help
   leaderboard:
     description: View the global Elo leaderboard
     usage: /<command> [page]
@@ -20,6 +20,10 @@ commands:
     description: Admin commands for EloRanks
     usage: /<command> <subcommand> [args]
     aliases: [eloranksadmin]
+  surrender:
+    description: Surrender from an active duel (30s minimum wait)
+    usage: /<command>
+    aliases: [forfeit, sq]
 
 permissions:
   er.duel:
@@ -31,12 +35,18 @@ permissions:
   er.duel.accept:
     description: Allow accepting duel requests
     default: true
+  er.duel.matchmaking:
+    description: Allow using matchmaking queue
+    default: true
+  er.duel.surrender:
+    description: Allow surrendering from duels
+    default: true
   er.stats.view:
-    description: Allow viewing stats
+    description: Allow viewing own stats
     default: true
   er.stats.view.others:
     description: Allow viewing other players' stats
-    default: op
+    default: true
   er.leaderboard:
     description: Allow viewing the leaderboard
     default: true

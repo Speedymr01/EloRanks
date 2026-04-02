@@ -72,16 +72,52 @@ public class ConfigManager {
         config.set("elo.k-factor.dynamic.by-elo.k-at-1500", 24);
         config.set("elo.k-factor.dynamic.by-elo.k-at-2000", 16);
         
+        // ============ PLACEMENT MATCH SETTINGS ============
+        config.set("elo.placement.enabled", true);
+        config.set("elo.placement.min-players", 5);
+        config.set("elo.placement.match-count", 5);
+        config.set("elo.placement.k-factor-games", 5);
+        config.set("elo.placement.bonus-beating-higher", true);
+        
         // ============ RANK SETTINGS ============
         config.set("ranks.percentage", true);
+        config.set("ranks.show-top-50", true);
+        config.set("ranks.nametag-prefix", true);
         
         // ============ DUEL SETTINGS ============
         config.set("duel.cooldown", 60);
         config.set("duel.request-timeout", 30);
         config.set("duel.arena-world", "duel_arena");
-        config.set("duel.allow spectators", true);
+        config.set("duel.allow-spectators", true);
         config.set("duel.spectator-permission", "er.spectate");
-        config.set("duel.forfeit-enabled", true);
+        
+        // ============ SURRENDER SETTINGS ============
+        config.set("surrender.enabled", true);
+        config.set("surrender.min-duel-time-seconds", 30);  // Must wait 30 seconds before surrendering
+        config.set("surrender.instant-loss", true);  // Surrender = full Elo penalty/reward (no halving)
+        
+        // ============ MATCHMAKING SETTINGS ============
+        config.set("matchmaking.enabled", true);
+        config.set("matchmaking.initial-elo-range", 50);
+        config.set("matchmaking.range-increase-per-second", 10);
+        config.set("matchmaking.max-elo-range", 500);
+        config.set("matchmaking.bidirectional-check", true);
+        config.set("matchmaking.check-interval-seconds", 1);
+        
+        // ============ COUNTDOWN SETTINGS ============
+        config.set("countdown.teleport-seconds", 5);
+        config.set("countdown.duel-start-seconds", 20);
+        config.set("countdown.show-title", true);
+        config.set("countdown.show-subtitle", true);
+        config.set("countdown.show-chat-messages", true);
+        
+        // ============ COUNTDOWN COLORS (seconds remaining) ============
+        config.set("countdown.colors.seconds-20-to-6", "BLUE");
+        config.set("countdown.colors.second-5", "DARK_RED");
+        config.set("countdown.colors.second-4", "RED");
+        config.set("countdown.colors.second-3", "GOLD");
+        config.set("countdown.colors.second-2", "YELLOW");
+        config.set("countdown.colors.second-1", "GREEN");
         
         // ============ ARENA SETTINGS ============
         config.set("arena.initial-count", 10);
@@ -90,6 +126,7 @@ public class ConfigManager {
         config.set("arena.auto-expand", true);
         config.set("arena.expand-count", 5);
         config.set("arena.respawn-delay", 3);
+        config.set("arena.load-timeout", 10);
         
         // ============ KIT SETTINGS ============
         config.set("kit.enabled", true);
@@ -104,7 +141,6 @@ public class ConfigManager {
         config.set("kit.food", "GOLDEN_APPLE:10");
         config.set("kit.blocks", "COBWEB:16,OAK_PLANKS:64");
         config.set("kit.buckets", "WATER_BUCKET,LAVA_BUCKET");
-        config.set("kit.potions", "SPEED:2,STRENGTH:2");
         
         // ============ POTION EFFECTS ============
         config.set("effects.speed", true);
@@ -125,26 +161,57 @@ public class ConfigManager {
         config.set("gameplay.hunger-depletion", false);
         config.set("gameplay.keep-inventory", true);
         config.set("gameplay.natural-regeneration", false);
+        config.set("gameplay.potion-effects-disabled", true);
+        
+        // ============ SCOREBOARD SETTINGS ============
+        config.set("scoreboard.enabled", true);
+        config.set("scoreboard.show-title", true);
+        config.set("scoreboard.title-animation", true);
+        config.set("scoreboard.show-rank", true);
+        config.set("scoreboard.show-elo", true);
+        config.set("scoreboard.show-world", true);
+        config.set("scoreboard.show-opponent-in-duel", true);
+        config.set("scoreboard.update-interval", 2);
+        
+        // ============ BOSSBAR SETTINGS ============
+        config.set("bossbar.enabled", true);
+        config.set("bossbar.show-opponent-health", true);
+        config.set("bossbar.health-update-interval", 5);
         
         // ============ CHAT MESSAGES ============
         config.set("chat.duel-request", true);
         config.set("chat.duel-start", true);
         config.set("chat.duel-end", true);
         config.set("chat.rank-up", true);
+        config.set("chat.matchmaking-search", true);
+        config.set("chat.pre-duel-instructions", true);
         
         // ============ MESSAGES ============
         config.set("messages.elo-gain", "&a+%elo% Elo! &7(Rank: #%rank%)");
         config.set("messages.elo-lost", "&c%elo% Elo! &7(Rank: #%rank%)");
         config.set("messages.new-rank", "&6&l★ &aYou are now Rank %rank%! ★");
         config.set("messages.leaderboard-header", "&7=== &eTop Players &7===");
+        config.set("messages.duel-started", "&aDuel started! Good luck!");
+        config.set("messages.duel-ended-winner", "&aYou won the duel!");
+        config.set("messages.duel-ended-loser", "&cYou lost the duel!");
         
         // ============ LEADERBOARD SETTINGS ============
         config.set("leaderboard.entries-per-page", 10);
         config.set("leaderboard.show-rank-change", true);
+        config.set("leaderboard.auto-update", true);
+        config.set("leaderboard.update-interval", 60);
         
-        // ============ DATABASE/SORAGE SETTINGS ============
-        config.set("storage.save-interval", 300); // seconds
+        // ============ DATABASE/STORAGE SETTINGS ============
+        config.set("storage.save-interval", 300);
         config.set("storage.async-save", true);
+        config.set("storage.backup-enabled", false);
+        config.set("storage.backup-interval", 3600);
+        
+        // ============ DEBUG SETTINGS ============
+        config.set("debug-mode", false);
+        config.set("debug.show-elo-calculations", false);
+        config.set("debug.show-matchmaking", false);
+        config.set("debug.show-countdown", false);
     }
 
     public void saveConfig() {
@@ -417,5 +484,190 @@ public class ConfigManager {
     // ============ LEADERBOARD GETTERS ============
     public int getLeaderboardEntriesPerPage() {
         return config.getInt("leaderboard.entries-per-page", 10);
+    }
+    
+    // ============ DEBUG GETTERS ============
+    public boolean isDebugMode() {
+        return config.getBoolean("debug-mode", false);
+    }
+    
+    // ============ PLACEMENT MATCH GETTERS ============
+    public boolean isPlacementEnabled() {
+        return config.getBoolean("elo.placement.enabled", true);
+    }
+    
+    public int getPlacementMinPlayers() {
+        return config.getInt("elo.placement.min-players", 5);
+    }
+    
+    public int getPlacementMatchCount() {
+        return config.getInt("elo.placement.match-count", 5);
+    }
+    
+    public int getPlacementKFactorGames() {
+        return config.getInt("elo.placement.k-factor-games", 3);
+    }
+    
+    public boolean isPlacementBonusEnabled() {
+        return config.getBoolean("elo.placement.bonus-beating-higher", true);
+    }
+    
+    // ============ RANK GETTERS ============
+    public boolean isShowTop50() {
+        return config.getBoolean("ranks.show-top-50", true);
+    }
+    
+    public boolean isNametagPrefixEnabled() {
+        return config.getBoolean("ranks.nametag-prefix", true);
+    }
+    
+    // ============ SURRENDER GETTERS ============
+    public boolean isSurrenderEnabled() {
+        return config.getBoolean("surrender.enabled", true);
+    }
+    
+    public int getSurrenderMinDuelTimeSeconds() {
+        return config.getInt("surrender.min-duel-time-seconds", 30);
+    }
+    
+    public boolean isSurrenderInstantLoss() {
+        return config.getBoolean("surrender.instant-loss", true);
+    }
+    
+    // ============ MATCHMAKING GETTERS ============
+    public boolean isMatchmakingEnabled() {
+        return config.getBoolean("matchmaking.enabled", true);
+    }
+    
+    public int getMatchmakingInitialRange() {
+        return config.getInt("matchmaking.initial-elo-range", 50);
+    }
+    
+    public int getMatchmakingRangeIncrease() {
+        return config.getInt("matchmaking.range-increase-per-second", 10);
+    }
+    
+    public int getMatchmakingMaxRange() {
+        return config.getInt("matchmaking.max-elo-range", 500);
+    }
+    
+    public boolean isMatchmakingBidirectionalCheck() {
+        return config.getBoolean("matchmaking.bidirectional-check", true);
+    }
+    
+    public int getMatchmakingCheckInterval() {
+        return config.getInt("matchmaking.check-interval-seconds", 1);
+    }
+    
+    // ============ COUNTDOWN GETTERS ============
+    public int getTeleportCountdownSeconds() {
+        return config.getInt("countdown.teleport-seconds", 5);
+    }
+    
+    public int getDuelStartCountdownSeconds() {
+        return config.getInt("countdown.duel-start-seconds", 20);
+    }
+    
+    public boolean isCountdownTitleEnabled() {
+        return config.getBoolean("countdown.show-title", true);
+    }
+    
+    public boolean isCountdownSubtitleEnabled() {
+        return config.getBoolean("countdown.show-subtitle", true);
+    }
+    
+    public boolean isCountdownChatEnabled() {
+        return config.getBoolean("countdown.show-chat-messages", true);
+    }
+    
+    // ============ ARENA GETTERS ============
+    public int getArenaLoadTimeout() {
+        return config.getInt("arena.load-timeout", 10);
+    }
+    
+    // ============ SCOREBOARD GETTERS ============
+    public boolean isScoreboardEnabled() {
+        return config.getBoolean("scoreboard.enabled", true);
+    }
+    
+    public boolean isScoreboardTitleEnabled() {
+        return config.getBoolean("scoreboard.show-title", true);
+    }
+    
+    public boolean isScoreboardTitleAnimated() {
+        return config.getBoolean("scoreboard.title-animation", true);
+    }
+    
+    public boolean isScoreboardRankEnabled() {
+        return config.getBoolean("scoreboard.show-rank", true);
+    }
+    
+    public boolean isScoreboardEloEnabled() {
+        return config.getBoolean("scoreboard.show-elo", true);
+    }
+    
+    public boolean isScoreboardWorldEnabled() {
+        return config.getBoolean("scoreboard.show-world", true);
+    }
+    
+    public boolean isScoreboardOpponentEnabled() {
+        return config.getBoolean("scoreboard.show-opponent-in-duel", true);
+    }
+    
+    public int getScoreboardUpdateInterval() {
+        return config.getInt("scoreboard.update-interval", 2);
+    }
+    
+    // ============ BOSSBAR GETTERS ============
+    public boolean isBossbarEnabled() {
+        return config.getBoolean("bossbar.enabled", true);
+    }
+    
+    public boolean isBossbarHealthEnabled() {
+        return config.getBoolean("bossbar.show-opponent-health", true);
+    }
+    
+    public int getBossbarHealthUpdateInterval() {
+        return config.getInt("bossbar.health-update-interval", 5);
+    }
+    
+    // ============ CHAT GETTERS ============
+    public boolean isMatchmakingChatEnabled() {
+        return config.getBoolean("chat.matchmaking-search", true);
+    }
+    
+    public boolean isPreDuelInstructionsEnabled() {
+        return config.getBoolean("chat.pre-duel-instructions", true);
+    }
+    
+    // ============ LEADERBOARD GETTERS ============
+    public boolean isLeaderboardAutoUpdate() {
+        return config.getBoolean("leaderboard.auto-update", true);
+    }
+    
+    public int getLeaderboardUpdateInterval() {
+        return config.getInt("leaderboard.update-interval", 60);
+    }
+    
+    // ============ STORAGE GETTERS ============
+    public boolean isBackupEnabled() {
+        return config.getBoolean("storage.backup-enabled", false);
+    }
+    
+    public int getBackupInterval() {
+        return config.getInt("storage.backup-interval", 3600);
+    }
+    
+    // ============ DEBUG GETTERS ============
+    public boolean isDebugEloCalculations() {
+        return config.getBoolean("debug.show-elo-calculations", false);
+    }
+    
+    public boolean isDebugMatchmaking() {
+        return config.getBoolean("debug.show-matchmaking", false);
+    }
+    
+    public boolean isDebugCountdown() {
+        return config.getBoolean("debug.show-countdown", false);
     }
 }

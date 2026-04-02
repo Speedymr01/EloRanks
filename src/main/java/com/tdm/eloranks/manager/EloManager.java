@@ -137,23 +137,42 @@ public class EloManager {
      * @param playerElo The player's current Elo
      * @param opponentElo The opponent's current Elo
      * @param totalMatches Total matches the player has played (for dynamic K)
+     * @param placementMatches Number of placement matches played
+     * @param placementActive Whether placement system is active
      * @param isWin true if player won, false if lost
      * @return Elo points to add/subtract
      */
-    public int calculateEloChange(int playerElo, int opponentElo, int totalMatches, boolean isWin) {
+    public int calculateEloChange(int playerElo, int opponentElo, int totalMatches, 
+            int placementMatches, boolean placementActive, boolean isWin) {
         // Expected score calculation
         double expected = 1.0 / (1.0 + Math.pow(10, (opponentElo - playerElo) / 400.0));
         
         // Get effective K-factor (dynamic based on games played and Elo)
-        int kFactor = configManager.getEffectiveKFactor(playerElo, totalMatches, false);
+        int kFactor;
         
+        // Special K-factor for placement matches (use high K for first few matches)
+        if (placementActive && placementMatches < configManager.getPlacementKFactorGames()) {
+            kFactor = configManager.getEffectiveKFactor(1000, 0, false); // Use new player K (48)
+        } else {
+            kFactor = configManager.getEffectiveKFactor(playerElo, totalMatches, false);
+        }
+        
+        int eloChange;
         if (isWin) {
             // Win: K * (1 - Expected)
-            return (int) Math.round(kFactor * (1.0 - expected));
+            eloChange = (int) Math.round(kFactor * (1.0 - expected));
         } else {
             // Loss: K * (0 - Expected) = -K * Expected
-            return (int) Math.round(-kFactor * expected);
+            eloChange = (int) Math.round(-kFactor * expected);
         }
+        
+        // Add placement bonus if active
+        if (placementActive && placementMatches < configManager.getPlacementMatchCount()) {
+            int bonus = getPlacementBonus(playerElo, opponentElo, isWin);
+            eloChange += bonus;
+        }
+        
+        return eloChange;
     }
 
     /**
@@ -167,9 +186,14 @@ public class EloManager {
             return null;
         }
         
-        // Calculate Elo changes with dynamic K-factor
-        int winnerChange = calculateEloChange(winner.getElo(), loser.getElo(), winner.getTotalMatches(), true);
-        int loserChange = calculateEloChange(loser.getElo(), winner.getElo(), loser.getTotalMatches(), false);
+        // Check if placement system is active
+        boolean placementActive = isPlacementSystemActive();
+        
+        // Calculate Elo changes with dynamic K-factor and placement bonuses
+        int winnerChange = calculateEloChange(winner.getElo(), loser.getElo(), 
+            winner.getTotalMatches(), winner.getPlacementMatches(), placementActive, true);
+        int loserChange = calculateEloChange(loser.getElo(), winner.getElo(), 
+            loser.getTotalMatches(), loser.getPlacementMatches(), placementActive, false);
         
         // Apply changes
         int newWinnerElo = Math.max(configManager.getMinElo(), 
@@ -183,6 +207,20 @@ public class EloManager {
         winner.addWin();
         loser.addLoss();
         
+        // Update placement matches
+        if (placementActive) {
+            winner.incrementPlacementMatches();
+            loser.incrementPlacementMatches();
+            
+            // Check if placement completed
+            if (winner.getPlacementMatches() >= configManager.getPlacementMatchCount()) {
+                winner.setPlacementCompleted(true);
+            }
+            if (loser.getPlacementMatches() >= configManager.getPlacementMatchCount()) {
+                loser.setPlacementCompleted(true);
+            }
+        }
+        
         winner.setLastDuelTime(System.currentTimeMillis());
         loser.setLastDuelTime(System.currentTimeMillis());
         
@@ -190,6 +228,105 @@ public class EloManager {
         saveAll();
         
         return new EloChangeResult(winnerChange, loserChange);
+    }
+    
+    /**
+     * Apply Elo changes for a surrender.
+     * Surrenderer gets full penalty (instant loss), opponent gets full reward.
+     * 
+     * @param surrendererUuid UUID of the surrendering player
+     * @param opponentUuid UUID of the opponent
+     * @return EloChangeResult or null if players not found
+     */
+    public EloChangeResult applySurrender(UUID surrendererUuid, UUID opponentUuid) {
+        PlayerData surrenderer = getPlayerData(surrendererUuid);
+        PlayerData opponent = getPlayerData(opponentUuid);
+        
+        if (surrenderer == null || opponent == null) {
+            return null;
+        }
+        
+        // Calculate full Elo changes (as if normal win/loss) - instant loss!
+        boolean placementActive = isPlacementSystemActive();
+        
+        int fullWinnerChange = calculateEloChange(opponent.getElo(), surrenderer.getElo(),
+            opponent.getTotalMatches(), opponent.getPlacementMatches(), placementActive, true);
+        int fullLoserChange = calculateEloChange(surrenderer.getElo(), opponent.getElo(),
+            surrenderer.getTotalMatches(), surrenderer.getPlacementMatches(), placementActive, false);
+        
+        // Apply full changes (no halving)
+        int surrendererPenalty = Math.abs(fullLoserChange);
+        int opponentReward = fullWinnerChange;
+        
+        // Apply changes
+        int newSurrendererElo = Math.max(configManager.getMinElo(),
+            Math.min(configManager.getMaxElo(), surrenderer.getElo() - surrendererPenalty));
+        int newOpponentElo = Math.max(configManager.getMinElo(),
+            Math.min(configManager.getMaxElo(), opponent.getElo() + opponentReward));
+        
+        surrenderer.setElo(newSurrendererElo);
+        opponent.setElo(newOpponentElo);
+        
+        // Stats: surrender counts as loss for surrenderer, win for opponent
+        surrenderer.addLoss();
+        opponent.addWin();
+        
+        // Update placement matches if active
+        if (placementActive) {
+            surrenderer.incrementPlacementMatches();
+            opponent.incrementPlacementMatches();
+            
+            if (surrenderer.getPlacementMatches() >= configManager.getPlacementMatchCount()) {
+                surrenderer.setPlacementCompleted(true);
+            }
+            if (opponent.getPlacementMatches() >= configManager.getPlacementMatchCount()) {
+                opponent.setPlacementCompleted(true);
+            }
+        }
+        
+        surrenderer.setLastDuelTime(System.currentTimeMillis());
+        opponent.setLastDuelTime(System.currentTimeMillis());
+        
+        updateRanks();
+        saveAll();
+        
+        // Return with surrenderer as "loser" (negative change) and opponent as "winner" (positive change)
+        return new EloChangeResult(opponentReward, -surrendererPenalty);
+    }
+    
+    /**
+     * Check if placement system is active (5+ players on leaderboard).
+     */
+    public boolean isPlacementSystemActive() {
+        if (!configManager.isPlacementEnabled()) return false;
+        return playerCache.size() >= configManager.getPlacementMinPlayers();
+    }
+    
+    /**
+     * Get the predicted Elo change bonus for placement matches.
+     * Based on expected outcome vs actual outcome.
+     */
+    public int getPlacementBonus(int playerElo, int opponentElo, boolean isWin) {
+        if (!isPlacementSystemActive()) return 0;
+        
+        // Calculate expected score (probability of winning)
+        double expected = 1.0 / (1.0 + Math.pow(10, (opponentElo - playerElo) / 400.0));
+        
+        // Bonus is higher when you win against a higher-rated opponent
+        // or lose less than expected against a higher-rated opponent
+        if (isWin) {
+            // Win bonus: extra Elo if you beat someone higher rated
+            if (opponentElo > playerElo) {
+                return (int) Math.round((opponentElo - playerElo) * 0.1); // 10% of Elo gap
+            }
+            return 0;
+        } else {
+            // Loss mitigation: lose less if you were expected to lose badly
+            if (opponentElo > playerElo && expected < 0.5) {
+                return (int) Math.round((expected * 10)); // Reduce loss by up to 10
+            }
+            return 0;
+        }
     }
 
     /**
