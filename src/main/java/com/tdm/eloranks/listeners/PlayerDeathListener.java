@@ -42,16 +42,28 @@ public class PlayerDeathListener implements Listener {
                 // End the duel - opponent wins (this restores inventories and teleports back)
                 duelManager.endDuel(opponentUuid, deadPlayer.getUniqueId());
                 
-                // Set health to full
-                deadPlayer.setHealth(deadPlayer.getMaxHealth());
+                // Set health to full (for winner)
                 opponent.setHealth(opponent.getMaxHealth());
                 
-                // Force respawn after a tick to ensure they're not stuck on death screen
+                // Schedule respawn and teleport back for loser after respawn
                 new BukkitRunnable() {
                     @Override
                     public void run() {
                         if (deadPlayer.isOnline()) {
+                            // Force respawn
                             deadPlayer.spigot().respawn();
+                            
+                            // Schedule teleport after respawn (need to wait a bit for respawn to complete)
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    if (deadPlayer.isOnline()) {
+                                        // Restore inventory and teleport back to original location
+                                        duelManager.restorePlayerInventory(deadPlayer);
+                                        deadPlayer.setHealth(deadPlayer.getMaxHealth());
+                                    }
+                                }
+                            }.runTaskLater(plugin, 5L);
                         }
                     }
                 }.runTask(plugin);

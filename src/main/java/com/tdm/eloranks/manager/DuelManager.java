@@ -876,6 +876,7 @@ public class DuelManager {
     }
 
     public void restorePlayerInventory(Player player) {
+        // Restore inventory first
         if (playerInventories.containsKey(player.getUniqueId())) {
             player.getInventory().setContents(playerInventories.remove(player.getUniqueId()));
         }
@@ -883,18 +884,26 @@ public class DuelManager {
             player.getInventory().setArmorContents(playerArmor.remove(player.getUniqueId()));
         }
         
-        // Restore location
+        // Restore location - use async teleport for better handling
         if (playerLocations.containsKey(player.getUniqueId())) {
             Location savedLoc = playerLocations.remove(player.getUniqueId());
-            World world = Bukkit.getWorld(savedLoc.getWorld().getName());
+            World world = savedLoc.getWorld();
+            if (world == null) {
+                // Try to get world by name
+                world = Bukkit.getWorld(savedLoc.getWorld().getName());
+            }
             if (world != null) {
-                // Create location with the saved world
+                // Create location with proper world
                 Location restoreLoc = new Location(world, savedLoc.getX(), savedLoc.getY(), savedLoc.getZ(), 
                     savedLoc.getYaw(), savedLoc.getPitch());
+                // Use safe teleport - this works even for dead/respawning players
                 player.teleport(restoreLoc);
             } else {
                 // World doesn't exist, send to spawn
-                player.teleport(Bukkit.getWorld("world").getSpawnLocation());
+                World defaultWorld = Bukkit.getWorld("world");
+                if (defaultWorld != null) {
+                    player.teleport(defaultWorld.getSpawnLocation());
+                }
                 plugin.getLogger().warning("Could not restore world for " + player.getName() + ", sent to spawn");
             }
         }
