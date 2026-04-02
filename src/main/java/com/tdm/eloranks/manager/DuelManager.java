@@ -706,12 +706,13 @@ public class DuelManager {
      * Actually teleport and start duel (called after pre-teleport countdown).
      */
     private void finishDuelStart(Player player1, Player player2, ArenaManager.Arena arena) {
-        // Check if players are still online and duel wasn't cancelled
-        if (!player1.isOnline() || !player2.isOnline() || 
-            !hasActiveDuel(player1.getUniqueId()) || !hasActiveDuel(player2.getUniqueId())) {
-            // One of the players is no longer in a duel, cancel
+        // Check if players are still online - activeDuels will be checked at the end
+        // during duel countdown start, not here (pendingDuels is the indicator for countdown phase)
+        if (!player1.isOnline() || !player2.isOnline()) {
+            // One of the players went offline, cancel
             pendingDuels.remove(player1.getUniqueId());
             pendingDuels.remove(player2.getUniqueId());
+            plugin.getCountdownManager().cancelCountdowns(player1.getUniqueId(), player2.getUniqueId());
             return;
         }
         
@@ -740,7 +741,7 @@ public class DuelManager {
         plugin.getArenaManager().occupyArena(arena.getId(), player1);
         plugin.getArenaManager().occupyArena(arena.getId(), player2);
         
-        // Set as active duel (with arena info)
+        // Set as active duel NOW so subsequent checks work
         activeDuels.put(player1.getUniqueId(), player2.getUniqueId());
         activeDuels.put(player2.getUniqueId(), player1.getUniqueId());
         

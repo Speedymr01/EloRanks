@@ -99,11 +99,7 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
             return;
         }
         
-        boolean success = plugin.getDuelManager().sendDuelRequest(player, target);
-        
-        if (success) {
-            player.sendMessage(SUCCESS + "✓ " + INFO + "Duel request sent to " + ACCENT + target.getName() + INFO + "!");
-        }
+        plugin.getDuelManager().sendDuelRequest(player, target);
     }
 
     private void handleDuelAccept(Player player, String requesterName) {
