@@ -53,23 +53,16 @@ public class EloCommand implements CommandExecutor, TabCompleter {
         String subCommand = args[0].toLowerCase();
 
         switch (subCommand) {
-            case "stats":
-            case "me":
-                showPlayerStats(player, eloManager);
-                break;
-            case "top":
-                showTopPlayers(player, eloManager, args);
-                break;
-            case "help":
-                showHelp(player);
-                break;
-            default:
+            case "stats", "me" -> showPlayerStats(player, eloManager);
+            case "top" -> showTopPlayers(player, eloManager, args);
+            case "help" -> showHelp(player);
+            default -> {
                 if (args.length >= 1) {
                     showOtherPlayerStats(player, args[0], eloManager);
                 } else {
                     showPlayerStats(player, eloManager);
                 }
-                break;
+            }
         }
 
         return true;
@@ -161,10 +154,10 @@ public class EloCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(ACCENT + "║" + PRIMARY + "      EloRanks Help     " + ACCENT + "║");
         player.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         player.sendMessage("");
-        player.sendMessage(INFO + "  /er " + MUTED + "- View your stats");
-        player.sendMessage(INFO + "  /er stats " + MUTED + "- View your stats");
-        player.sendMessage(INFO + "  /er <name> " + MUTED + "- View player stats");
-        player.sendMessage(INFO + "  /er top " + MUTED + "- View top players");
+        player.sendMessage(INFO + "  /elo " + MUTED + "- View your stats");
+        player.sendMessage(INFO + "  /elo stats " + MUTED + "- View your stats");
+        player.sendMessage(INFO + "  /elo <name> " + MUTED + "- View player stats");
+        player.sendMessage(INFO + "  /elo top " + MUTED + "- View top players");
         player.sendMessage(INFO + "  /duel <player> " + MUTED + "- Challenge to duel");
         player.sendMessage(INFO + "  /leaderboard " + MUTED + "- Full leaderboard");
         player.sendMessage("");

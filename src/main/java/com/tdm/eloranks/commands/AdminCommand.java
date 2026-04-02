@@ -50,23 +50,23 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         String subcommand = args[0].toLowerCase();
 
         switch (subcommand) {
-            case "makeduel", "forceduel", "startduel" -> handleMakeDuel(sender, args);
-            case "addarena", "newarena", "createarena" -> handleAddArena(sender);
-            case "reload", "rl", "reloadconfig" -> handleReload(sender);
-            case "resetall", "resettop", "cleardata", "wipedata" -> handleResetAll(sender);
-            case "resetplayer", "resetstats", "resetp" -> handleResetPlayer(sender, args);
-            case "setelo", "setrating" -> handleSetElo(sender, args);
-            case "adde", "addelo", "addrating" -> handleAddElo(sender, args);
-            case "arenainfo", "arenas", "arenastatus" -> handleArenaInfo(sender);
-            case "forcereset", "resetarena", "cleararena" -> handleForceResetArena(sender, args);
-            case "stats", "statistics", "plstats" -> handleStats(sender);
-            case "debug", "dbg", "diag" -> handleDebug(sender);
-            case "endduel", "stopduel", "cancelduel" -> handleEndDuel(sender, args);
-            case "tparena", "gotoarena", "arenatp" -> handleTeleport(sender, args);
-            case "getpos", "position", "arenapos" -> handleGetPosition(sender, args);
-            case "heal", "healplayer" -> handleHeal(sender, args);
-            case "feed", "feedplayer" -> handleFeed(sender, args);
-            case "help", "?", "commands" -> showHelp(sender);
+            case "createduel" -> handleMakeDuel(sender, args);
+            case "addarena" -> handleAddArena(sender);
+            case "reload" -> handleReload(sender);
+            case "resetall" -> handleResetAll(sender);
+            case "resetplayer" -> handleResetPlayer(sender, args);
+            case "setelo" -> handleSetElo(sender, args);
+            case "addelo" -> handleAddElo(sender, args);
+            case "arenainfo" -> handleArenaInfo(sender);
+            case "resetarena" -> handleForceResetArena(sender, args);
+            case "stats" -> handleStats(sender);
+            case "debug" -> handleDebug(sender);
+            case "endduel" -> handleEndDuel(sender, args);
+            case "tparena" -> handleTeleport(sender, args);
+            case "getpos" -> handleGetPosition(sender, args);
+            case "heal" -> handleHeal(sender, args);
+            case "feed" -> handleFeed(sender, args);
+            case "help" -> showHelp(sender);
             default -> {
                 sender.sendMessage(DANGER + "✖ " + MUTED + "Unknown subcommand. Use /eradmin help");
                 return true;
@@ -454,21 +454,21 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ACCENT + "║" + PRIMARY + "     EloRanks Admin Help    " + ACCENT + "║");
         sender.sendMessage(ACCENT + "╚═════════════════════════════════╝");
         sender.sendMessage("");
-        sender.sendMessage(INFO + "  ⚔️  makeduel <p1> <p2> [f]" + MUTED + "    - Create duel (f=true instant)");
-        sender.sendMessage(INFO + "  🏟️  addarena" + MUTED + "                    - Add new arena");
-        sender.sendMessage(INFO + "  🔄 reload" + MUTED + "                   - Reload config");
-        sender.sendMessage(INFO + "  🗑️  resetall" + MUTED + "                  - Reset all player data");
-        sender.sendMessage(INFO + "  👤 resetplayer <p>" + MUTED + "           - Reset player stats");
-        sender.sendMessage(INFO + "  ⚡ setelo <p> <elo>" + MUTED + "            - Set player Elo");
-        sender.sendMessage(INFO + "  ➕ adde <p> <amt>" + MUTED + "              - Add Elo to player");
-        sender.sendMessage(INFO + "  ℹ️  arenainfo" + MUTED + "                 - Show arena info");
-        sender.sendMessage(INFO + "  🔧 forcereset <id>" + MUTED + "           - Force reset arena");
-        sender.sendMessage(INFO + "  ⏹️  endduel <p>" + MUTED + "                - End player's duel");
-        sender.sendMessage(INFO + "  📍 tp <p>" + MUTED + "                    - Teleport to arena");
-        sender.sendMessage(INFO + "  📊 stats" + MUTED + "                    - Plugin statistics");
-        sender.sendMessage(INFO + "  🐛 debug" + MUTED + "                    - Debug info");
-        sender.sendMessage(INFO + "  💚 heal <p>" + MUTED + "                   - Heal player");
-        sender.sendMessage(INFO + "  🍖 feed <p>" + MUTED + "                  - Feed player");
+        sender.sendMessage(INFO + "  ⚔️  createduel <p1> <p2> [f]" + MUTED + "  - Create duel (f=true instant)");
+        sender.sendMessage(INFO + "  🏟️  addarena" + MUTED + "                  - Add new arena");
+        sender.sendMessage(INFO + "  🔄 reload" + MUTED + "                 - Reload config");
+        sender.sendMessage(INFO + "  🗑️  resetall" + MUTED + "                - Reset all player data");
+        sender.sendMessage(INFO + "  👤 resetplayer <p>" + MUTED + "         - Reset player stats");
+        sender.sendMessage(INFO + "  ⚡ setelo <p> <elo>" + MUTED + "          - Set player Elo");
+        sender.sendMessage(INFO + "  ➕ addelo <p> <amt>" + MUTED + "           - Add Elo to player");
+        sender.sendMessage(INFO + "  ℹ️  arenainfo" + MUTED + "                - Show arena info");
+        sender.sendMessage(INFO + "  🔧 resetarena <id>" + MUTED + "          - Reset arena");
+        sender.sendMessage(INFO + "  ⏹️  endduel <p>" + MUTED + "              - End player's duel");
+        sender.sendMessage(INFO + "  📍 tparena [p] <id>" + MUTED + "         - Teleport to arena");
+        sender.sendMessage(INFO + "  📊 stats" + MUTED + "                  - Plugin statistics");
+        sender.sendMessage(INFO + "  🐛 debug" + MUTED + "                  - Debug info");
+        sender.sendMessage(INFO + "  💚 heal <p>" + MUTED + "                 - Heal player");
+        sender.sendMessage(INFO + "  🍖 feed <p>" + MUTED + "                - Feed player");
         sender.sendMessage("");
     }
 
@@ -482,23 +482,23 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             String current = args[0].toLowerCase();
             List<String> subcommands = List.of(
-                "makeduel", "forceduel", "startduel",
-                "addarena", "newarena", "createarena",
-                "reload", "rl", "reloadconfig",
-                "resetall", "resettop", "cleardata", "wipedata",
-                "resetplayer", "resetstats", "resetp",
-                "setelo", "setrating",
-                "adde", "addelo", "addrating",
-                "arenainfo", "arenas", "arenastatus",
-                "forcereset", "resetarena", "cleararena",
-                "stats", "statistics", "plstats",
-                "debug", "dbg", "diag",
-                "endduel", "stopduel", "cancelduel",
-                "tparena", "gotoarena", "arenatp",
-                "getpos", "position", "arenapos",
-                "heal", "healplayer",
-                "feed", "feedplayer",
-                "help", "?", "commands"
+                "createduel",
+                "addarena",
+                "reload",
+                "resetall",
+                "resetplayer",
+                "setelo",
+                "addelo",
+                "arenainfo",
+                "resetarena",
+                "stats",
+                "debug",
+                "endduel",
+                "tparena",
+                "getpos",
+                "heal",
+                "feed",
+                "help"
             );
             if (current.isEmpty()) {
                 return subcommands;
@@ -514,13 +514,13 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         List<String> matches = new ArrayList<>();
 
         // Commands that need player argument
-        if (sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel") ||
-            sub.equals("resetplayer") || sub.equals("resetstats") || sub.equals("resetp") ||
-            sub.equals("setelo") || sub.equals("setrating") ||
-            sub.equals("adde") || sub.equals("addelo") || sub.equals("addrating") ||
-            sub.equals("endduel") || sub.equals("stopduel") || sub.equals("cancelduel") ||
-            sub.equals("heal") || sub.equals("healplayer") ||
-            sub.equals("feed") || sub.equals("feedplayer")) {
+        if (sub.equals("createduel") ||
+            sub.equals("resetplayer") ||
+            sub.equals("setelo") ||
+            sub.equals("addelo") ||
+            sub.equals("endduel") ||
+            sub.equals("heal") ||
+            sub.equals("feed")) {
             if (args.length == 2) {
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
@@ -528,8 +528,8 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             }
-            // Add "true" for makeduel third arg
-            if ((sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel")) && args.length == 3) {
+            // Add "true" for createduel third arg
+            if (sub.equals("createduel") && args.length == 3) {
                 if (current.isEmpty() || "true".startsWith(current)) {
                     matches.add("true");
                 }
@@ -537,9 +537,9 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         }
 
         // Commands that need arena ID
-        if (sub.equals("forcereset") || sub.equals("resetarena") || sub.equals("cleararena") ||
-            sub.equals("getpos") || sub.equals("position") || sub.equals("arenapos") ||
-            sub.equals("tparena") || sub.equals("gotoarena") || sub.equals("arenatp")) {
+        if (sub.equals("resetarena") ||
+            sub.equals("getpos") ||
+            sub.equals("tparena")) {
             if (args.length == 2) {
                 // tparena with 2 args: [arenaId] - teleport self
                 for (var arena : plugin.getArenaManager().getArenas()) {
@@ -560,7 +560,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         }
 
         // For tparena, add player names if args[1] might be a player (not arena ID)
-        if ((sub.equals("tparena") || sub.equals("gotoarena") || sub.equals("arenatp")) && args.length == 2) {
+        if (sub.equals("tparena") && args.length == 2) {
             // Check if args[1] looks like a player name (not a number)
             try {
                 Integer.parseInt(args[1]);
