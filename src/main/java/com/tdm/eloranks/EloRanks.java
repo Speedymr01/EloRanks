@@ -66,8 +66,8 @@ public final class EloRanks extends JavaPlugin {
         getLogger().info("[7/7] Registering commands & listeners...");
         
         // Register commands
-        getCommand("er").setExecutor(new EloCommand(this));
-        getCommand("er").setTabCompleter(new EloCommand(this));
+        getCommand("elo").setExecutor(new EloCommand(this));
+        getCommand("elo").setTabCompleter(new EloCommand(this));
         getCommand("duel").setExecutor(new DuelCommand(this));
         getCommand("duel").setTabCompleter(new DuelCommand(this));
         getCommand("leaderboard").setExecutor(new LeaderboardCommand(this));
