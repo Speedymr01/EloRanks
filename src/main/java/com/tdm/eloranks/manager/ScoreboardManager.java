@@ -168,6 +168,14 @@ public class ScoreboardManager {
         // Get opponent info if in duel
         String opponentInfo = getOpponentInfo(player);
         
+        // Get matchmaking status
+        boolean inMatchmaking = plugin.getDuelManager().isWaitingForMatchmaking(player.getUniqueId());
+        int matchWaitTime = plugin.getDuelManager().getMatchmakingWaitTime(player.getUniqueId());
+        
+        // Get request counts
+        int requestsOut = plugin.getDuelManager().getOutgoingRequests(player.getUniqueId());
+        int requestsIn = plugin.getDuelManager().getIncomingRequests(player.getUniqueId());
+        
         // Set scoreboard entries - use simple text without complex team prefixes
         // Scores go from high to low (15 at top)
         int score = 15;
@@ -192,6 +200,53 @@ public class ScoreboardManager {
         // World section
         objective.getScore("§6🌍 §eWorld §6🌍").setScore(score--);
         objective.getScore("  §e" + worldName).setScore(score--);
+        
+        // Empty line
+        objective.getScore("  ").setScore(score--);
+        
+        // Requests section
+        if (requestsOut > 0 || requestsIn > 0) {
+            objective.getScore("§e📨 §eRequests §e📨").setScore(score--);
+            if (requestsOut > 0) {
+                objective.getScore("  §eOut: §b" + requestsOut).setScore(score--);
+            }
+            if (requestsIn > 0) {
+                objective.getScore("  §eIn: §b" + requestsIn).setScore(score--);
+            }
+            objective.getScore(" ").setScore(score--);
+        }
+        
+        // Matchmaking or countdown section (only shows when in matchmaking or countdown)
+        Integer countdown = plugin.getDuelManager().getPendingDuelCountdown(player.getUniqueId());
+        
+        if (countdown != null) {
+            // Match found - show countdown instead of matchmaking
+            // Animated countdown progress bar
+            int total = 40; // 20s teleport + 20s duel
+            int filled = total - countdown;
+            int barLength = 10;
+            int filledBars = (int) ((float) filled / total * barLength);
+            StringBuilder bar = new StringBuilder("§a");
+            for (int i = 0; i < barLength; i++) {
+                if (i < filledBars) {
+                    bar.append("█");
+                } else {
+                    bar.append("§7§l█");
+                }
+            }
+            
+            objective.getScore("§e⏱️ §eMatch Found! §e⏱️").setScore(score--);
+            objective.getScore("  §b" + bar + " §e" + countdown + "s").setScore(score--);
+            objective.getScore(" ").setScore(score--);
+        } else if (inMatchmaking) {
+            // Still searching - show matchmaking with animation
+            int dotCount = (int) ((System.currentTimeMillis() / 500) % 3);
+            String dots = "§e" + ".".repeat(dotCount);
+            
+            objective.getScore("§e🎯 §eSearching... " + dots).setScore(score--);
+            objective.getScore("  §bWait time: §e" + matchWaitTime + "s").setScore(score--);
+            objective.getScore(" ").setScore(score--);
+        }
         
         // Divider or VS section
         if (opponentInfo != null) {
@@ -324,6 +379,9 @@ public class ScoreboardManager {
      */
     private void startScoreboardUpdater() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            // Decrement pending duel countdowns
+            plugin.getDuelManager().decrementPendingDuels();
+            
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.hasPermission("er.duel")) {
                     updateScoreboard(player);

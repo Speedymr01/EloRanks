@@ -50,7 +50,10 @@ public class DuelManager {
     
     // Track when each duel started (for surrender time check)
     private final Map<UUID, Long> duelStartTimes = new ConcurrentHashMap<>();
-
+    
+    // Track pending duels (match found, countdown started) - key is player UUID, value is countdown seconds remaining
+    private final Map<UUID, Integer> pendingDuels = new ConcurrentHashMap<>();
+    
     public DuelManager(EloRanks plugin) {
         this.plugin = plugin;
         this.configManager = plugin.getConfigManager();
@@ -431,6 +434,57 @@ public class DuelManager {
     public boolean isWaitingForMatchmaking(UUID uuid) {
         return waitingForMatchmaking.contains(uuid);
     }
+    
+    /**
+     * Get matchmaking wait time in seconds for a player.
+     */
+    public int getMatchmakingWaitTime(UUID uuid) {
+        return matchmakingWaitTime.getOrDefault(uuid, 0);
+    }
+    
+    /**
+     * Get count of outgoing duel requests for a player.
+     */
+    public int getOutgoingRequests(UUID uuid) {
+        if (duelRequests.containsKey(uuid)) {
+            return 1;
+        }
+        return 0;
+    }
+    
+    /**
+     * Get count of incoming duel requests for a player.
+     */
+    public int getIncomingRequests(UUID uuid) {
+        int count = 0;
+        for (UUID requester : duelRequests.keySet()) {
+            if (duelRequests.get(requester).equals(uuid)) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    /**
+     * Get countdown seconds remaining for pending duel (match found).
+     * Returns null if no pending duel.
+     */
+    public Integer getPendingDuelCountdown(UUID uuid) {
+        return pendingDuels.get(uuid);
+    }
+    
+    /**
+     * Decrement pending duel countdowns for all pending duels.
+     * Called by scoreboard updater.
+     */
+    public void decrementPendingDuels() {
+        for (UUID uuid : pendingDuels.keySet()) {
+            int current = pendingDuels.get(uuid);
+            if (current > 0) {
+                pendingDuels.put(uuid, current - 1);
+            }
+        }
+    }
 
     /**
      * Send a duel request from one player to another.
@@ -678,11 +732,23 @@ public class DuelManager {
     private void startDuelCountdown(Player player1, Player player2, ArenaManager.Arena arena) {
         CountdownManager countdown = plugin.getCountdownManager();
         
+        // Track pending duels for scoreboard countdown display
+        int teleportSeconds = configManager.getTeleportCountdownSeconds();
+        int duelSeconds = configManager.getDuelStartCountdownSeconds();
+        int totalCountdown = teleportSeconds + duelSeconds;
+        
+        pendingDuels.put(player1.getUniqueId(), totalCountdown);
+        pendingDuels.put(player2.getUniqueId(), totalCountdown);
+        
         // Show countdown for both players
         countdown.startTeleportCountdown(player1, player2, () -> {
             // After teleport countdown, start FIGHT countdown
             countdown.startDuelCountdown(player1, player2, () -> {
-                // Duel officially begins - send start messages
+                // Duel officially begins - remove from pending and record start time
+                pendingDuels.remove(player1.getUniqueId());
+                pendingDuels.remove(player2.getUniqueId());
+                
+                // Send start messages
                 sendDuelStartMessages(player1, player2, arena);
             });
         });
