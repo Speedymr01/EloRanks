@@ -163,11 +163,18 @@ public class ScoreboardManager {
         // Get or create objective
         objective = scoreboard.getObjective("eloranks");
         if (objective == null) {
-            objective = scoreboard.registerNewObjective("eloranks", "dummy", getAnimatedTitle());
+            objective = scoreboard.registerNewObjective("eloranks", "dummy", getAnimatedTitleOnce());
             objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         } else {
-            // Update the title with animation using Component
-            objective.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(getAnimatedTitle()));
+            // Only update the title, not all entries
+            objective.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(getAnimatedTitleOnce()));
+        }
+        
+        // Clear existing entries first to prevent duplication
+        for (String entry : objective.getScoreboard().getEntries()) {
+            if (entry.startsWith("§")) {  // Only clear our entries
+                objective.getScoreboard().resetScores(entry);
+            }
         }
         
         // Get player data
@@ -183,7 +190,7 @@ public class ScoreboardManager {
         
         // Set scoreboard entries with proper color handling
         setScoreboardEntry(objective, "§7§m-----------------", 12);
-        setScoreboardEntry(objective, getAnimatedTitle(), 11);
+        setScoreboardEntry(objective, getAnimatedTitleOnce(), 11);
         setScoreboardEntry(objective, "§6✦ §eRank §6✦", 10);
         setScoreboardEntry(objective, "  §f#§e" + rank + " §7/ §e" + eloManager.getTotalPlayers(), 9);
         setScoreboardEntry(objective, " ", 8);
@@ -207,11 +214,13 @@ public class ScoreboardManager {
     }
     
     /**
-     * Get animated title - cycles through colors.
+     * Get animated title - cycles through colors (called once per update cycle).
      */
-    private String getAnimatedTitle() {
-        currentFrame = (currentFrame + 1) % titleFrames.length;
-        return titleFrames[currentFrame];
+    private int titleFrameCounter = 0;
+    
+    private String getAnimatedTitleOnce() {
+        titleFrameCounter = (titleFrameCounter + 1) % titleFrames.length;
+        return titleFrames[titleFrameCounter];
     }
     
     /**
