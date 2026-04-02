@@ -62,7 +62,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             case "stats" -> handleStats(sender);
             case "debug" -> handleDebug(sender);
             case "endduel" -> handleEndDuel(sender, args);
-            case "tparena" -> handleTeleport(sender, args);
+            case "tp" -> handleTeleport(sender, args);
             case "getpos" -> handleGetPosition(sender, args);
             case "heal" -> handleHeal(sender, args);
             case "feed" -> handleFeed(sender, args);
@@ -302,74 +302,98 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleTeleport(CommandSender sender, String[] args) {
-        Player target;
-        int arenaId = -1;
+        if (args.length < 2) {
+            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin tp <place> [player]");
+            sender.sendMessage(MUTED + "  Places: <arenaId>, overworld, nether, end");
+            return;
+        }
 
+        String place = args[1].toLowerCase();
+        Player target;
+        
+        // Determine target player
         if (args.length >= 3) {
-            // /eradmin tparena <player> <arenaId>
-            try {
-                arenaId = Integer.parseInt(args[2]);
-            } catch (NumberFormatException e) {
-                sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid arena ID!");
-                return;
-            }
-            target = Bukkit.getPlayer(args[1]);
+            // Player specified
+            target = Bukkit.getPlayer(args[2]);
             if (target == null) {
                 sender.sendMessage(DANGER + "✖ " + MUTED + "Player not found!");
                 return;
             }
-        } else if (args.length == 2) {
-            // /eradmin tparena <arenaId> - teleport self to arena
+        } else {
+            // Use executor
             if (sender instanceof Player) {
                 target = (Player) sender;
-                try {
-                    arenaId = Integer.parseInt(args[1]);
-                } catch (NumberFormatException e) {
-                    sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid arena ID!");
-                    return;
-                }
             } else {
-                sender.sendMessage(DANGER + "✖ " + MUTED + "Specify a player and arena!");
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Specify a player!");
                 return;
             }
-        } else {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin tparena [player] <arenaId>");
-            return;
         }
 
-        Collection<ArenaManager.Arena> arenas = plugin.getArenaManager().getArenas();
-        ArenaManager.Arena arena = null;
+        // Check if it's an arena or world
+        try {
+            int arenaId = Integer.parseInt(place);
+            // It's an arena
+            Collection<ArenaManager.Arena> arenas = plugin.getArenaManager().getArenas();
+            ArenaManager.Arena arena = null;
 
-        if (arenaId >= 0) {
             for (var a : arenas) {
                 if (a.getId() == arenaId) {
                     arena = a;
                     break;
                 }
             }
-        } else {
-            // Get random available arena
-            for (var a : arenas) {
-                if (!a.isInUse()) {
-                    arena = a;
-                    break;
+
+            if (arena == null) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Arena not found!");
+                return;
+            }
+
+            Location spawn = arena.getSpawn1() != null ? arena.getSpawn1() : arena.getSpawn2();
+            if (spawn == null) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Arena has no spawn points!");
+                return;
+            }
+
+            target.teleport(spawn);
+            sender.sendMessage(SUCCESS + "✓ " + INFO + "Teleported " + ACCENT + target.getName() + INFO + " to arena " + ACCENT + arenaId);
+            return;
+        } catch (NumberFormatException e) {
+            // It's not an arena ID, check for worlds
+        }
+
+        // Check for world names
+        World targetWorld;
+        switch (place) {
+            case "overworld", "world" -> {
+                targetWorld = Bukkit.getWorld("world");
+                if (targetWorld == null) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "Overworld not found!");
+                    return;
                 }
+            }
+            case "nether" -> {
+                targetWorld = Bukkit.getWorld("world_nether");
+                if (targetWorld == null) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "Nether not found!");
+                    return;
+                }
+            }
+            case "end", "the_end" -> {
+                targetWorld = Bukkit.getWorld("world_the_end");
+                if (targetWorld == null) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "End not found!");
+                    return;
+                }
+            }
+            default -> {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid place! Use: arena ID, overworld, nether, or end");
+                return;
             }
         }
 
-        if (arena == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Arena not found or no available arenas!");
-            return;
-        }
-
-        Location spawn = arena.getSpawn1() != null ? arena.getSpawn1() : arena.getSpawn2();
-        if (spawn == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Arena has no spawn points!");
-            return;
-        }
-
-        target.teleport(spawn);
-        sender.sendMessage(SUCCESS + "✓ " + INFO + "Teleported " + ACCENT + target.getName() + INFO + " to arena " + ACCENT + arena.getId());
+        // Teleport to world spawn
+        target.teleport(targetWorld.getSpawnLocation());
+        sender.sendMessage(SUCCESS + "✓ " + INFO + "Teleported " + ACCENT + target.getName() + INFO + " to " + place);
     }
 
     private void handleGetPosition(CommandSender sender, String[] args) {
@@ -464,7 +488,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(INFO + "  ℹ️  arenainfo" + MUTED + "                - Show arena info");
         sender.sendMessage(INFO + "  🔧 resetarena <id>" + MUTED + "          - Reset arena");
         sender.sendMessage(INFO + "  ⏹️  endduel <p>" + MUTED + "              - End player's duel");
-        sender.sendMessage(INFO + "  📍 tparena [p] <id>" + MUTED + "         - Teleport to arena");
+        sender.sendMessage(INFO + "  📍 tp <place> [p]" + MUTED + "            - Teleport (arena/overworld/nether/end)");
         sender.sendMessage(INFO + "  📊 stats" + MUTED + "                  - Plugin statistics");
         sender.sendMessage(INFO + "  🐛 debug" + MUTED + "                  - Debug info");
         sender.sendMessage(INFO + "  💚 heal <p>" + MUTED + "                 - Heal player");
@@ -494,7 +518,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 "stats",
                 "debug",
                 "endduel",
-                "tparena",
+                "tp",
                 "getpos",
                 "heal",
                 "feed",
@@ -536,20 +560,10 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        // Commands that need arena ID
+        // Commands that need arena ID or world
         if (sub.equals("resetarena") ||
-            sub.equals("getpos") ||
-            sub.equals("tparena")) {
+            sub.equals("getpos")) {
             if (args.length == 2) {
-                // tparena with 2 args: [arenaId] - teleport self
-                for (var arena : plugin.getArenaManager().getArenas()) {
-                    String id = String.valueOf(arena.getId());
-                    if (current.isEmpty() || id.startsWith(current)) {
-                        matches.add(id);
-                    }
-                }
-            } else if (args.length == 3) {
-                // tparena with 3 args: <player> <arenaId>
                 for (var arena : plugin.getArenaManager().getArenas()) {
                     String id = String.valueOf(arena.getId());
                     if (current.isEmpty() || id.startsWith(current)) {
@@ -559,17 +573,58 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        // For tparena, add player names if args[1] might be a player (not arena ID)
-        if (sub.equals("tparena") && args.length == 2) {
-            // Check if args[1] looks like a player name (not a number)
-            try {
-                Integer.parseInt(args[1]);
-                // It's a number, so it's arena ID - no players to add
-            } catch (NumberFormatException e) {
-                // It's not a number, could be player name
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
-                        matches.add(p.getName());
+        // TP command - args[1] = place (arena ID or world), args[2] = optional player
+        if (sub.equals("tp") && args.length == 2) {
+            // Add arena IDs
+            for (var arena : plugin.getArenaManager().getArenas()) {
+                String id = String.valueOf(arena.getId());
+                if (current.isEmpty() || id.startsWith(current)) {
+                    matches.add(id);
+                }
+            }
+            // Add world names
+            List.of("overworld", "nether", "end").forEach(world -> {
+                if (current.isEmpty() || world.startsWith(current)) {
+                    matches.add(world);
+                }
+            });
+        }
+
+        // For tp with 2 args where first arg is not a number - add player names
+        if (sub.equals("tp") && args.length == 3) {
+            // args[2] should be player name
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
+                    matches.add(p.getName());
+                }
+            }
+        }
+
+        // Also for tparena backwards compatibility
+        if (sub.equals("tparena")) {
+            if (args.length == 2) {
+                for (var arena : plugin.getArenaManager().getArenas()) {
+                    String id = String.valueOf(arena.getId());
+                    if (current.isEmpty() || id.startsWith(current)) {
+                        matches.add(id);
+                    }
+                }
+            } else if (args.length == 3) {
+                for (var arena : plugin.getArenaManager().getArenas()) {
+                    String id = String.valueOf(arena.getId());
+                    if (current.isEmpty() || id.startsWith(current)) {
+                        matches.add(id);
+                    }
+                }
+            }
+            if (args.length == 2) {
+                try {
+                    Integer.parseInt(args[1]);
+                } catch (NumberFormatException e) {
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
+                            matches.add(p.getName());
+                        }
                     }
                 }
             }
