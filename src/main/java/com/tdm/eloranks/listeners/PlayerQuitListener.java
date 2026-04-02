@@ -8,7 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Handles player quit/disconnect during duels.
+ * Handles player quit/disconnect during duels and countdowns.
  */
 public class PlayerQuitListener implements Listener {
 
@@ -37,6 +37,13 @@ public class PlayerQuitListener implements Listener {
                 // No opponent online, just cancel
                 duelManager.cancelDuel(player.getUniqueId());
             }
+        }
+        
+        // Check if player was in pending duel countdown - cancel if so
+        if (duelManager.isInPendingDuel(player.getUniqueId()) || 
+            duelManager.isInCountdown(player.getUniqueId())) {
+            plugin.getLogger().info("Player " + player.getName() + " disconnected during countdown. Cancelling duel...");
+            duelManager.cancelDuel(player.getUniqueId());
         }
         
         // Clean up any pending duel requests from this player

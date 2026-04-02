@@ -6,7 +6,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 
 /**
  * Listener for handling duel deaths and ending matches.
@@ -25,7 +24,24 @@ public class PlayerDeathListener implements Listener {
         
         DuelManager duelManager = plugin.getDuelManager();
         
-        // Check if the dead player is in an active duel
+        // Check if player is in countdown (either pendingDuels OR countdownPairs)
+        // countdownPairs covers the teleport countdown phase (before pendingDuels is populated)
+        if (duelManager.isInPendingDuel(deadPlayer.getUniqueId()) || 
+            duelManager.isInCountdown(deadPlayer.getUniqueId())) {
+            plugin.getLogger().info("Player " + deadPlayer.getName() + " died during countdown. Cancelling duel...");
+            
+            // Cancel the duel countdown
+            duelManager.cancelDuel(deadPlayer.getUniqueId());
+            
+            // Allow death screen but keep inventory
+            event.setDeathMessage(null);
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
+            // DO NOT set health back to full - that causes stuck death screen
+            return;
+        }
+        
+        // Check if the dead player is in an active duel (after countdown)
         if (duelManager.hasActiveDuel(deadPlayer.getUniqueId())) {
             // Get the duel opponent
             var opponentUuid = duelManager.getDuelOpponent(deadPlayer.getUniqueId());
@@ -45,28 +61,7 @@ public class PlayerDeathListener implements Listener {
                 // Set health to full (for winner)
                 opponent.setHealth(opponent.getMaxHealth());
                 
-                // Schedule respawn and teleport back for loser after respawn
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (deadPlayer.isOnline()) {
-                            // Force respawn
-                            deadPlayer.spigot().respawn();
-                            
-                            // Schedule teleport after respawn (need to wait a bit for respawn to complete)
-                            new BukkitRunnable() {
-                                @Override
-                                public void run() {
-                                    if (deadPlayer.isOnline()) {
-                                        // Restore inventory and teleport back to original location
-                                        duelManager.restorePlayerInventory(deadPlayer);
-                                        deadPlayer.setHealth(deadPlayer.getMaxHealth());
-                                    }
-                                }
-                            }.runTaskLater(plugin, 5L);
-                        }
-                    }
-                }.runTask(plugin);
+                // DON'T force respawn - let player click the respawn button naturally
             }
         }
     }

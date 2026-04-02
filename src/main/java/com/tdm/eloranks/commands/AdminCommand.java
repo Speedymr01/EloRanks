@@ -12,7 +12,6 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +28,6 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     private final ChatColor DANGER = ChatColor.RED;
     private final ChatColor INFO = ChatColor.YELLOW;
     private final ChatColor MUTED = ChatColor.GRAY;
-    private final ChatColor DEBUG = ChatColor.LIGHT_PURPLE;
 
     public AdminCommand(EloRanks plugin) {
         this.plugin = plugin;
@@ -286,9 +284,6 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(DANGER + "✖ " + MUTED + "Player is not in a duel!");
             return;
         }
-
-        UUID opponentUuid = plugin.getDuelManager().getDuelOpponent(target.getUniqueId());
-        Player opponent = Bukkit.getPlayer(opponentUuid);
 
         // End duel without winner (cancel)
         plugin.getDuelManager().cancelDuel(target.getUniqueId());

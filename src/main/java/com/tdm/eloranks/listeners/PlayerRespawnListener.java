@@ -2,7 +2,6 @@ package com.tdm.eloranks.listeners;
 
 import com.tdm.eloranks.EloRanks;
 import com.tdm.eloranks.manager.DuelManager;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -10,6 +9,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 
 /**
  * Listener for handling player respawn in duel arena.
+ * When player clicks respawn, verify they were in a duel, then restore.
  */
 public class PlayerRespawnListener implements Listener {
 
@@ -24,25 +24,16 @@ public class PlayerRespawnListener implements Listener {
         Player player = event.getPlayer();
         DuelManager duelManager = plugin.getDuelManager();
         
-        // Check if player was in a duel and is in the duel arena world
-        if (duelManager.hasActiveDuel(player.getUniqueId())) {
-            String arenaWorld = plugin.getConfigManager().getArenaWorld();
-            if (player.getWorld().getName().equals(arenaWorld)) {
-                // Player respawned in arena world - set immediate respawn
-                // The respawn location will be handled by the death listener
-                // But we can also ensure they don't get stuck on death screen
-                
-                // Get arena spawn location for the player
-                var arena = plugin.getArenaManager().getPlayerArena(player);
-                if (arena != null) {
-                    // Set respawn to arena spawn (gives immediate feel)
-                    Location spawn = duelManager.getDuelOpponent(player.getUniqueId()) != null ? 
-                        arena.getSpawn1() : arena.getSpawn2();
-                    if (spawn != null) {
-                        event.setRespawnLocation(spawn);
-                    }
-                }
-            }
+        // Only process if player was in an active duel (not just in arena world)
+        if (!duelManager.hasActiveDuel(player.getUniqueId())) {
+            return; // Not a duel respawn - don't touch anything
         }
+        
+        // Player was in a duel - restore inventory and teleport back
+        duelManager.restorePlayerInventory(player);
+        player.setHealth(player.getMaxHealth());
+        
+        // Note: We don't set the respawn location here because we want the player
+        // to click the respawn button naturally. The restore happens when they do.
     }
 }

@@ -61,7 +61,7 @@ public class CountdownManager {
      * Run a simple countdown without color progression.
      */
     private void runSimpleCountdown(Player player1, Player player2, int seconds, Runnable onComplete) {
-        int taskId = Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+        int taskId = Bukkit.getScheduler().runTask(plugin, new Runnable() {
             private int currentSecond = seconds;
             
             @Override
@@ -99,7 +99,7 @@ public class CountdownManager {
                     activeCountdownTasks.remove(player2.getUniqueId());
                     
                     if (onComplete != null) {
-                        Bukkit.getScheduler().runTask(plugin, onComplete);
+                        onComplete.run();
                     }
                 }
             }
@@ -131,8 +131,8 @@ public class CountdownManager {
      * Run countdown with specific colors for each second.
      */
     private void runColoredCountdown(Player player1, Player player2, int seconds, Runnable onComplete) {
-        // Use scheduler to run each second
-        int taskId = Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+        // Use scheduler to run each second - use sync task
+        int taskId = Bukkit.getScheduler().runTask(plugin, new Runnable() {
             private int currentSecond = seconds;
             
             @Override
@@ -163,7 +163,7 @@ public class CountdownManager {
                     
                     // Run the completion callback
                     if (onComplete != null) {
-                        Bukkit.getScheduler().runTask(plugin, onComplete);
+                        onComplete.run();
                     }
                 }
             }

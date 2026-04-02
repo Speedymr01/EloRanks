@@ -355,7 +355,7 @@ public class EloManager {
 
     public List<PlayerData> getTopPlayers(int count) {
         List<PlayerData> top = getLeaderboard();
-        return top.subList(0, Math.min(count, top.size()));
+        return new ArrayList<>(top.subList(0, Math.min(count, top.size())));
     }
 
     public int getPlayerRank(UUID uuid) {

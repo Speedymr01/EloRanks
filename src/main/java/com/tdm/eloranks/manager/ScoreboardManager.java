@@ -33,13 +33,23 @@ public class ScoreboardManager {
     private final ChatColor SUCCESS = ChatColor.GREEN;
     private final ChatColor INFO = ChatColor.YELLOW;
     private final ChatColor MUTED = ChatColor.GRAY;
+    
+    // Team scoreboard for nametags - initialized early
+    private Scoreboard teamScoreboard = null;
 
     public ScoreboardManager(EloRanks plugin) {
         this.plugin = plugin;
         this.eloManager = plugin.getEloManager();
         
-        // Create main scoreboard for team prefixes
-        setupTeamScoreboard();
+        // Check if scoreboard is enabled in config
+        if (!plugin.getConfigManager().isScoreboardEnabled()) {
+            plugin.getLogger().info("Scoreboard disabled in config, skipping initialization");
+            return;
+        }
+        
+        // Create main scoreboard for team prefixes FIRST
+        this.teamScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        setupTeamScoreboard(this.teamScoreboard);
         
         // Update scoreboard for all players periodically
         startScoreboardUpdater();
@@ -52,9 +62,7 @@ public class ScoreboardManager {
     /**
      * Setup the main scoreboard with teams for nametags.
      */
-    private void setupTeamScoreboard() {
-        // Create a persistent scoreboard for team prefixes
-        teamScoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+    private void setupTeamScoreboard(Scoreboard teamScoreboard) {
         
         // Create teams for each rank prefix
         for (int rank = 1; rank <= 50; rank++) {
@@ -71,8 +79,6 @@ public class ScoreboardManager {
         Team defaultTeam = teamScoreboard.registerNewTeam("unranked");
         defaultTeam.prefix(LegacyComponentSerializer.legacyAmpersand().deserialize("§7[#?§7] "));
     }
-    
-    private Scoreboard teamScoreboard;
     
     /**
      * Get rank prefix with color based on rank position.
@@ -197,12 +203,12 @@ public class ScoreboardManager {
         // Empty line
         objective.getScore("  ").setScore(score--);
         
-        // World section
-        objective.getScore("§6🌍 §eWorld §6🌍").setScore(score--);
-        objective.getScore("  §e" + worldName).setScore(score--);
-        
-        // Empty line
-        objective.getScore("  ").setScore(score--);
+        // World section (if enabled in config)
+        if (plugin.getConfigManager().isScoreboardWorldEnabled()) {
+            objective.getScore("§6🌍 §eWorld §6🌍").setScore(score--);
+            objective.getScore("  §e" + worldName).setScore(score--);
+            objective.getScore("  ").setScore(score--);
+        }
         
         // Requests section
         if (requestsOut > 0 || requestsIn > 0) {
@@ -221,8 +227,12 @@ public class ScoreboardManager {
         
         if (countdown != null) {
             // Match found - show countdown instead of matchmaking
+            // Get actual countdown totals from config
+            int teleportSeconds = plugin.getConfigManager().getTeleportCountdownSeconds();
+            int duelSeconds = plugin.getConfigManager().getDuelStartCountdownSeconds();
+            int total = teleportSeconds + duelSeconds;
+            
             // Animated countdown progress bar
-            int total = 40; // 20s teleport + 20s duel
             int filled = total - countdown;
             int barLength = 10;
             int filledBars = (int) ((float) filled / total * barLength);
@@ -248,8 +258,8 @@ public class ScoreboardManager {
             objective.getScore(" ").setScore(score--);
         }
         
-        // Divider or VS section
-        if (opponentInfo != null) {
+        // Divider or VS section (if enabled in config)
+        if (plugin.getConfigManager().isScoreboardOpponentEnabled() && opponentInfo != null) {
             objective.getScore("§c§l⚔ §eVS §c⚔").setScore(score--);
             objective.getScore("  §e" + opponentInfo).setScore(score--);
         } else {
@@ -394,13 +404,20 @@ public class ScoreboardManager {
      * Update bossbars showing opponent health during duels.
      */
     private void startBossbarUpdater() {
+        if (!plugin.getConfigManager().isBossbarEnabled()) {
+            return; // Bossbar disabled in config
+        }
+        
+        int updateInterval = plugin.getConfigManager().getBossbarHealthUpdateInterval();
+        long ticks = updateInterval * 20L; // Convert seconds to ticks
+        
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.hasPermission("er.duel")) {
                     updateDuelBossbar(player);
                 }
             }
-        }, 10L, 10L); // Update every 0.5 seconds (10 ticks)
+        }, 10L, ticks);
     }
     
     /**

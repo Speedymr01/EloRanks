@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class ConfigManager {
 
@@ -46,9 +48,59 @@ public class ConfigManager {
             }
         } else {
             config = YamlConfiguration.loadConfiguration(configFile);
+            
+            // Auto-migration: add any missing keys from defaults
+            boolean migrated = migrateConfigDefaults();
+            if (migrated) {
+                plugin.getLogger().info("Config updated with new settings!");
+                saveConfig();
+            }
         }
         
         configs.put("config", config);
+    }
+    
+    /**
+     * Add missing config keys from defaults (auto-migration).
+     * Returns true if any keys were added.
+     */
+    private boolean migrateConfigDefaults() {
+        boolean changed = false;
+        
+        // Save current config values
+        Map<String, Object> existingValues = new HashMap<>();
+        for (String key : config.getKeys(true)) {
+            existingValues.put(key, config.get(key));
+        }
+        
+        // Apply defaults (this sets all expected keys)
+        setDefaults();
+        
+        // Check which keys were missing and restore their values
+        for (Map.Entry<String, Object> entry : existingValues.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            
+            // Only restore if the value wasn't a default that was just added
+            // and the key exists in defaults
+            if (config.contains(key) && config.get(key).equals(value)) {
+                // Value was already in config - good
+            }
+        }
+        
+        // Check if we added any new keys (by comparing key counts)
+        Set<String> newKeys = new HashSet<>(config.getKeys(true));
+        newKeys.removeAll(existingValues.keySet());
+        
+        if (!newKeys.isEmpty()) {
+            plugin.getLogger().info("Added " + newKeys.size() + " new config settings:");
+            for (String key : newKeys) {
+                plugin.getLogger().info("  + " + key + ": " + config.get(key));
+            }
+            changed = true;
+        }
+        
+        return changed;
     }
 
     private void setDefaults() {
@@ -111,13 +163,7 @@ public class ConfigManager {
         config.set("countdown.show-subtitle", true);
         config.set("countdown.show-chat-messages", true);
         
-        // ============ COUNTDOWN COLORS (seconds remaining) ============
-        config.set("countdown.colors.seconds-20-to-6", "BLUE");
-        config.set("countdown.colors.second-5", "DARK_RED");
-        config.set("countdown.colors.second-4", "RED");
-        config.set("countdown.colors.second-3", "GOLD");
-        config.set("countdown.colors.second-2", "YELLOW");
-        config.set("countdown.colors.second-1", "GREEN");
+        // REMOVED: countdown.colors.* - colors are hardcoded in CountdownManager
         
         // ============ ARENA SETTINGS ============
         config.set("arena.initial-count", 10);
@@ -142,18 +188,11 @@ public class ConfigManager {
         config.set("kit.blocks", "COBWEB:16,OAK_PLANKS:64");
         config.set("kit.buckets", "WATER_BUCKET,LAVA_BUCKET");
         
-        // ============ POTION EFFECTS ============
-        config.set("effects.speed", true);
-        config.set("effects.speed-level", 2);
-        config.set("effects.speed-duration", 180);
-        config.set("effects.strength", true);
-        config.set("effects.strength-level", 2);
-        config.set("effects.strength-duration", 180);
+        // ============ POTION EFFECTS (moved to kit.potions) ============
+        // REMOVED: effects.* - now configured via kit.potions
         
-        // ============ WORLD SETTINGS ============
-        config.set("world.void-world", true);
-        config.set("world.spawn-protection", false);
-        config.set("world.pvp-enabled", true);
+        // ============ WORLD SETTINGS (managed by WorldManager) ============
+        // REMOVED: world.* - handled internally
         
         // ============ GAMEPLAY SETTINGS ============
         config.set("gameplay.fall-damage", false);
@@ -161,21 +200,17 @@ public class ConfigManager {
         config.set("gameplay.hunger-depletion", false);
         config.set("gameplay.keep-inventory", true);
         config.set("gameplay.natural-regeneration", false);
-        config.set("gameplay.potion-effects-disabled", true);
         
         // ============ SCOREBOARD SETTINGS ============
         config.set("scoreboard.enabled", true);
         config.set("scoreboard.show-title", true);
-        config.set("scoreboard.title-animation", true);
         config.set("scoreboard.show-rank", true);
         config.set("scoreboard.show-elo", true);
         config.set("scoreboard.show-world", true);
         config.set("scoreboard.show-opponent-in-duel", true);
-        config.set("scoreboard.update-interval", 2);
         
         // ============ BOSSBAR SETTINGS ============
         config.set("bossbar.enabled", true);
-        config.set("bossbar.show-opponent-health", true);
         config.set("bossbar.health-update-interval", 5);
         
         // ============ CHAT MESSAGES ============
@@ -481,6 +516,10 @@ public class ConfigManager {
         return config.getBoolean("chat.duel-end", true);
     }
 
+    public boolean isRankUpChatEnabled() {
+        return config.getBoolean("chat.rank-up", true);
+    }
+
     // ============ LEADERBOARD GETTERS ============
     public int getLeaderboardEntriesPerPage() {
         return config.getInt("leaderboard.entries-per-page", 10);
@@ -638,6 +677,35 @@ public class ConfigManager {
     
     public boolean isPreDuelInstructionsEnabled() {
         return config.getBoolean("chat.pre-duel-instructions", true);
+    }
+    
+    // ============ MESSAGE GETTERS ============
+    public String getEloGainMessage() {
+        return config.getString("messages.elo-gain", "&a+%elo% Elo! &7(Rank: #%rank%)");
+    }
+    
+    public String getEloLostMessage() {
+        return config.getString("messages.elo-lost", "&c%elo% Elo! &7(Rank: #%rank%)");
+    }
+    
+    public String getNewRankMessage() {
+        return config.getString("messages.new-rank", "&6&l★ &aYou are now Rank %rank%! ★");
+    }
+    
+    public String getLeaderboardHeaderMessage() {
+        return config.getString("messages.leaderboard-header", "&7=== &eTop Players &7===");
+    }
+    
+    public String getDuelStartedMessage() {
+        return config.getString("messages.duel-started", "&aDuel started! Good luck!");
+    }
+    
+    public String getDuelEndedWinnerMessage() {
+        return config.getString("messages.duel-ended-winner", "&aYou won the duel!");
+    }
+    
+    public String getDuelEndedLoserMessage() {
+        return config.getString("messages.duel-ended-loser", "&cYou lost the duel!");
     }
     
     // ============ LEADERBOARD GETTERS ============
