@@ -180,38 +180,36 @@ public class DuelCommand implements CommandExecutor, TabCompleter {
             return List.of();
         }
 
-        List<String> subcommands = List.of("request", "challenge", "send", "accept", "decline", "help");
-
         if (args.length == 0) {
-            return subcommands;
+            // Full subcommand list for first argument
+            return List.of("request", "challenge", "send", "accept", "decline", "match", "queue", "mm", "cancel", "stop", "surrender", "forfeit", "help");
         }
 
         String current = args[args.length - 1].toLowerCase();
         
-        // Match subcommands
-        List<String> matches = subcommands.stream()
-            .filter(s -> s.toLowerCase().startsWith(current))
-            .collect(Collectors.toList());
-
-        // Add player names
         if (args.length == 1) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.getName().toLowerCase().startsWith(current)) {
-                    matches.add(p.getName());
-                }
-            }
-        } else if (args.length == 2) {
+            // Match subcommands including match/queue/mm/cancel/surrender
+            List<String> subcommands = List.of("request", "challenge", "send", "accept", "decline", "match", "queue", "mm", "cancel", "stop", "surrender", "forfeit", "help");
+            return subcommands.stream()
+                .filter(s -> s.toLowerCase().startsWith(current))
+                .collect(Collectors.toList());
+        }
+
+        // Second argument - player names for request/accept/decline
+        if (args.length == 2) {
             String sub = args[0].toLowerCase();
             if (sub.equals("request") || sub.equals("challenge") || sub.equals("send") ||
                 sub.equals("accept") || sub.equals("decline")) {
+                List<String> matches = new java.util.ArrayList<>();
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.getName().toLowerCase().startsWith(current)) {
+                    if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
                         matches.add(p.getName());
                     }
                 }
+                return matches;
             }
         }
 
-        return matches;
+        return List.of();
     }
 }

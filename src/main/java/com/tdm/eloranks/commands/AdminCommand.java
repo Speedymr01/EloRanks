@@ -302,15 +302,11 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     }
 
     private void handleTeleport(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin tp [player] [arenaId]");
-            return;
-        }
-
         Player target;
         int arenaId = -1;
 
         if (args.length >= 3) {
+            // /eradmin tparena <player> <arenaId>
             try {
                 arenaId = Integer.parseInt(args[2]);
             } catch (NumberFormatException e) {
@@ -318,17 +314,26 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 return;
             }
             target = Bukkit.getPlayer(args[1]);
-        } else {
-            if (sender instanceof Player) {
-                target = (Player) sender;
-            } else {
-                sender.sendMessage(DANGER + "✖ " + MUTED + "Specify a player!");
+            if (target == null) {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Player not found!");
                 return;
             }
-        }
-
-        if (target == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "Player not found!");
+        } else if (args.length == 2) {
+            // /eradmin tparena <arenaId> - teleport self to arena
+            if (sender instanceof Player) {
+                target = (Player) sender;
+                try {
+                    arenaId = Integer.parseInt(args[1]);
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(DANGER + "✖ " + MUTED + "Invalid arena ID!");
+                    return;
+                }
+            } else {
+                sender.sendMessage(DANGER + "✖ " + MUTED + "Specify a player and arena!");
+                return;
+            }
+        } else {
+            sender.sendMessage(DANGER + "✖ " + MUTED + "Usage: /eradmin tparena [player] <arenaId>");
             return;
         }
 
@@ -353,7 +358,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         }
 
         if (arena == null) {
-            sender.sendMessage(DANGER + "✖ " + MUTED + "No available arenas!");
+            sender.sendMessage(DANGER + "✖ " + MUTED + "Arena not found or no available arenas!");
             return;
         }
 
@@ -473,72 +478,99 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return List.of();
         }
 
-        List<String> subcommands = List.of(
-            "makeduel", "forceduel", "startduel",
-            "addarena", "newarena", "createarena",
-            "reload", "rl", "reloadconfig",
-            "resetall", "resettop", "cleardata", "wipedata",
-            "resetplayer", "resetstats", "resetp",
-            "setelo", "setrating",
-            "adde", "addelo", "addrating",
-            "arenainfo", "arenas", "arenastatus",
-            "forcereset", "resetarena", "cleararena",
-            "stats", "statistics", "plstats",
-            "debug", "dbg", "diag",
-            "endduel", "stopduel", "cancelduel",
-            "tparena", "gotoarena", "arenatp",
-            "getpos", "position", "arenapos",
-            "heal", "healplayer",
-            "feed", "feedplayer",
-            "help", "?", "commands"
-        );
-
-        if (args.length == 0) {
-            return subcommands;
+        // Return full subcommand list for first argument
+        if (args.length == 1) {
+            String current = args[0].toLowerCase();
+            List<String> subcommands = List.of(
+                "makeduel", "forceduel", "startduel",
+                "addarena", "newarena", "createarena",
+                "reload", "rl", "reloadconfig",
+                "resetall", "resettop", "cleardata", "wipedata",
+                "resetplayer", "resetstats", "resetp",
+                "setelo", "setrating",
+                "adde", "addelo", "addrating",
+                "arenainfo", "arenas", "arenastatus",
+                "forcereset", "resetarena", "cleararena",
+                "stats", "statistics", "plstats",
+                "debug", "dbg", "diag",
+                "endduel", "stopduel", "cancelduel",
+                "tparena", "gotoarena", "arenatp",
+                "getpos", "position", "arenapos",
+                "heal", "healplayer",
+                "feed", "feedplayer",
+                "help", "?", "commands"
+            );
+            if (current.isEmpty()) {
+                return subcommands;
+            }
+            return subcommands.stream()
+                .filter(s -> s.toLowerCase().startsWith(current))
+                .collect(Collectors.toList());
         }
 
+        // Second argument - different based on subcommand
+        String sub = args[0].toLowerCase();
         String current = args[args.length - 1].toLowerCase();
-        
-        // Match subcommands
-        List<String> matches = subcommands.stream()
-            .filter(s -> s.toLowerCase().startsWith(current))
-            .collect(Collectors.toList());
+        List<String> matches = new ArrayList<>();
 
-        // Add player names for certain subcommands
-        if (args.length >= 2) {
-            String sub = args[0].toLowerCase();
-            if (sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel") ||
-                sub.equals("resetplayer") || sub.equals("resetstats") || sub.equals("resetp") ||
-                sub.equals("setelo") || sub.equals("setrating") ||
-                sub.equals("adde") || sub.equals("addelo") || sub.equals("addrating") ||
-                sub.equals("endduel") || sub.equals("stopduel") || sub.equals("cancelduel") ||
-                sub.equals("tparena") || sub.equals("gotoarena") || sub.equals("arenatp") ||
-                sub.equals("heal") || sub.equals("healplayer") ||
-                sub.equals("feed") || sub.equals("feedplayer")) {
-                
-                // Add online player names
+        // Commands that need player argument
+        if (sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel") ||
+            sub.equals("resetplayer") || sub.equals("resetstats") || sub.equals("resetp") ||
+            sub.equals("setelo") || sub.equals("setrating") ||
+            sub.equals("adde") || sub.equals("addelo") || sub.equals("addrating") ||
+            sub.equals("endduel") || sub.equals("stopduel") || sub.equals("cancelduel") ||
+            sub.equals("heal") || sub.equals("healplayer") ||
+            sub.equals("feed") || sub.equals("feedplayer")) {
+            if (args.length == 2) {
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    if (p.getName().toLowerCase().startsWith(current)) {
+                    if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
                         matches.add(p.getName());
                     }
                 }
             }
-            
-            // Add arena IDs for forcereset
-            if (sub.equals("forcereset") || sub.equals("resetarena") || sub.equals("cleararena") ||
-                sub.equals("getpos") || sub.equals("position") || sub.equals("arenapos")) {
+            // Add "true" for makeduel third arg
+            if ((sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel")) && args.length == 3) {
+                if (current.isEmpty() || "true".startsWith(current)) {
+                    matches.add("true");
+                }
+            }
+        }
+
+        // Commands that need arena ID
+        if (sub.equals("forcereset") || sub.equals("resetarena") || sub.equals("cleararena") ||
+            sub.equals("getpos") || sub.equals("position") || sub.equals("arenapos") ||
+            sub.equals("tparena") || sub.equals("gotoarena") || sub.equals("arenatp")) {
+            if (args.length == 2) {
+                // tparena with 2 args: [arenaId] - teleport self
                 for (var arena : plugin.getArenaManager().getArenas()) {
                     String id = String.valueOf(arena.getId());
-                    if (id.startsWith(current)) {
+                    if (current.isEmpty() || id.startsWith(current)) {
+                        matches.add(id);
+                    }
+                }
+            } else if (args.length == 3) {
+                // tparena with 3 args: <player> <arenaId>
+                for (var arena : plugin.getArenaManager().getArenas()) {
+                    String id = String.valueOf(arena.getId());
+                    if (current.isEmpty() || id.startsWith(current)) {
                         matches.add(id);
                     }
                 }
             }
-            
-            // Add "true" for makeduel force argument
-            if ((sub.equals("makeduel") || sub.equals("forceduel") || sub.equals("startduel")) && args.length == 3) {
-                if ("true".startsWith(current)) {
-                    matches.add("true");
+        }
+
+        // For tparena, add player names if args[1] might be a player (not arena ID)
+        if ((sub.equals("tparena") || sub.equals("gotoarena") || sub.equals("arenatp")) && args.length == 2) {
+            // Check if args[1] looks like a player name (not a number)
+            try {
+                Integer.parseInt(args[1]);
+                // It's a number, so it's arena ID - no players to add
+            } catch (NumberFormatException e) {
+                // It's not a number, could be player name
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (current.isEmpty() || p.getName().toLowerCase().startsWith(current)) {
+                        matches.add(p.getName());
+                    }
                 }
             }
         }
