@@ -14,6 +14,7 @@ import com.sk89q.worldedit.extension.platform.Platform;
 import com.tdm.eloranks.EloRanks;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -54,6 +55,15 @@ public class ArenaManager {
     private boolean arenaSystemDisabled = false;
     private boolean arenasInitialized = false;
     
+    // Arena data file
+    private File arenaDataFile;
+    private YamlConfiguration arenaDataConfig;
+    
+    // Schematic dimensions (stored for dev reference)
+    private int schematicWidth;
+    private int schematicHeight;
+    private int schematicDepth;
+    
     public ArenaManager(EloRanks plugin, String schematicName, int initialArenas, int arenaSpacing) {
         this.plugin = plugin;
         this.worldName = plugin.getConfigManager().getArenaWorld();
@@ -64,11 +74,156 @@ public class ArenaManager {
         plugin.getLogger().info("=== ArenaManager Starting ===");
         plugin.getLogger().info("Schema: " + schematicName + " | Arenas: " + initialArenas + " | Spacing: " + arenaSpacing);
         
+        // Initialize arena data file
+        initArenaDataFile();
+        
         // Create the void world
         createVoidWorld();
         
         // Schedule schematic loading with retry logic
         scheduleArenaInitialization();
+    }
+    
+    /**
+     * Initialize the arenas.yml file.
+     */
+    private void initArenaDataFile() {
+        plugin.getDataFolder().mkdirs();
+        arenaDataFile = new File(plugin.getDataFolder(), "arenas.yml");
+        
+        if (!arenaDataFile.exists()) {
+            try {
+                arenaDataFile.createNewFile();
+                plugin.getLogger().info("Created arenas.yml");
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed to create arenas.yml: " + e.getMessage());
+            }
+        }
+        
+        arenaDataConfig = YamlConfiguration.loadConfiguration(arenaDataFile);
+        
+        // Set default metadata
+        arenaDataConfig.set("info.schematic", schematicName);
+        arenaDataConfig.set("info.arena-world", worldName);
+        arenaDataConfig.set("info.spacing", arenaSpacing);
+        arenaDataConfig.set("info.initial-count", initialArenas);
+        
+        saveArenaData();
+    }
+    
+    /**
+     * Detect existing arenas in the world by scanning for emerald blocks at corners.
+     * Called after schematic is loaded to get dimensions.
+     */
+    public void detectExistingArenas() {
+        if (schematic == null) {
+            plugin.getLogger().warning("Cannot detect arenas - schematic not loaded");
+            return;
+        }
+        
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            plugin.getLogger().warning("Cannot detect arenas - world not loaded");
+            return;
+        }
+        
+        int width = schematic.getDimensions().x();
+        int depth = schematic.getDimensions().z();
+        
+        plugin.getLogger().info("Scanning for existing arenas...");
+        
+        // Calculate expected corner positions for each potential arena
+        // Arena corners are at: offsetX, offsetX + width, 0, depth
+        // Search in increments of arenaSpacing
+        
+        int searchMaxOffset = (initialArenas + 5) * arenaSpacing; // Search a bit more than initial
+        
+        for (int offsetX = 0; offsetX < searchMaxOffset; offsetX += arenaSpacing) {
+            if (isArenaAt(world, offsetX, width, depth)) {
+                // Found an existing arena
+                int arenaId = offsetX / arenaSpacing; // Calculate arena ID from offset
+                
+                // Check if we already have this arena
+                if (arenas.containsKey(arenaId)) {
+                    continue; // Already tracked
+                }
+                
+                plugin.getLogger().info("Detected existing arena at offset " + offsetX);
+                
+                // Find spawn points
+                Location spawn1 = findSpawnPoint(worldName, offsetX, Material.RED_WOOL);
+                Location spawn2 = findSpawnPoint(worldName, offsetX, Material.BLUE_WOOL);
+                
+                // Create arena and add to tracking
+                Arena arena = new Arena(arenaId, offsetX, spawn1, spawn2);
+                arenas.put(arenaId, arena);
+                
+                // Save to arenas.yml
+                saveArenaInfo(arena);
+                
+                // Update nextArenaId if this is a new higher ID
+                if (arenaId >= nextArenaId.get()) {
+                    nextArenaId.set(arenaId + 1);
+                }
+            }
+        }
+        
+        plugin.getLogger().info("Detection complete. Found " + arenas.size() + " arenas.");
+    }
+    
+    /**
+     * Check if an arena exists at the given offset by verifying all 8 corner emerald blocks.
+     * Corner A: (offsetX, 0, 0), Corner B: (offsetX+90, 47, 34)
+     */
+    private boolean isArenaAt(World world, int offsetX, int width, int depth) {
+        // Arena spans from (offsetX, 0, 0) to (offsetX+90, 47, 34)
+        int xMin = offsetX;
+        int xMax = offsetX + 90;
+        int yMin = 0;
+        int yMax = 47;
+        int zMin = 0;
+        int zMax = 34;
+        
+        // Check all 8 corners
+        boolean[] corners = {
+            // Bottom layer (y=0)
+            world.getBlockAt(xMin, yMin, zMin).getType() == Material.EMERALD_BLOCK,
+            world.getBlockAt(xMax, yMin, zMin).getType() == Material.EMERALD_BLOCK,
+            world.getBlockAt(xMin, yMin, zMax).getType() == Material.EMERALD_BLOCK,
+            world.getBlockAt(xMax, yMin, zMax).getType() == Material.EMERALD_BLOCK,
+            // Top layer (y=47)
+            world.getBlockAt(xMin, yMax, zMin).getType() == Material.EMERALD_BLOCK,
+            world.getBlockAt(xMax, yMax, zMin).getType() == Material.EMERALD_BLOCK,
+            world.getBlockAt(xMin, yMax, zMax).getType() == Material.EMERALD_BLOCK,
+            world.getBlockAt(xMax, yMax, zMax).getType() == Material.EMERALD_BLOCK
+        };
+        
+        // Require all 8 corners to be emerald blocks
+        for (boolean corner : corners) {
+            if (!corner) return false;
+        }
+        return true;
+    }
+    
+    /**
+     * Save arena data to file.
+     */
+    public void saveArenaData() {
+        if (arenaDataConfig == null || arenaDataFile == null) return;
+        
+        try {
+            arenaDataConfig.save(arenaDataFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save arenas.yml: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Reload arena data from file.
+     */
+    public void reloadArenaData() {
+        if (arenaDataFile == null) return;
+        arenaDataConfig = YamlConfiguration.loadConfiguration(arenaDataFile);
     }
     
     /**
@@ -171,15 +326,22 @@ public class ArenaManager {
      * Initialize arenas - called after FAWE has loaded.
      */
     private void initializeArenas() {
-        // Load schematic
+        // Load schematic first
         loadSchematic();
         
-        // Generate initial arenas
-        generateArenas(initialArenas);
+        // Detect existing arenas in the world
+        detectExistingArenas();
+        
+        // Generate missing arenas up to initial count
+        int missing = initialArenas - arenas.size();
+        if (missing > 0) {
+            plugin.getLogger().info("Generating " + missing + " new arenas...");
+            generateArenas(missing);
+        }
         
         // Mark as initialized
         arenasInitialized = true;
-        plugin.getLogger().info("Arena system ready!");
+        plugin.getLogger().info("Arena system ready! Total arenas: " + arenas.size());
     }
     
     /**
@@ -254,9 +416,21 @@ public class ArenaManager {
             ClipboardFormat format = ClipboardFormats.findByFile(schematicFile);
             if (format != null) {
                 schematic = format.load(fis);
+                
+                // Store schematic dimensions (user-specified: 90x47x34)
+                schematicWidth = 90;
+                schematicHeight = 47;
+                schematicDepth = 34;
+                
+                // Update arena data config
+                arenaDataConfig.set("info.schematic-width", schematicWidth);
+                arenaDataConfig.set("info.schematic-height", schematicHeight);
+                arenaDataConfig.set("info.schematic-depth", schematicDepth);
+                saveArenaData();
+                
                 plugin.getLogger().info("Loaded schematic: " + schematicName + 
-                        " (Size: " + schematic.getDimensions().x() + "x" + 
-                        schematic.getDimensions().y() + "x" + schematic.getDimensions().z() + ")");
+                        " (Size: " + schematicWidth + "x" + 
+                        schematicHeight + "x" + schematicDepth + ")");
             } else {
                 plugin.getLogger().severe("Unknown schematic format: " + schematicName);
             }
@@ -319,6 +493,9 @@ public class ArenaManager {
             Arena arena = new Arena(arenaId, offsetX, spawn1, spawn2);
             arenas.put(arenaId, arena);
             
+            // Save arena info to arenas.yml
+            saveArenaInfo(arena);
+            
             plugin.getLogger().info("Generated arena " + arenaId + 
                     " (Spawn1: " + (spawn1 != null ? "found" : "not found") + 
                     ", Spawn2: " + (spawn2 != null ? "found" : "not found") + ")");
@@ -326,6 +503,54 @@ public class ArenaManager {
         } catch (WorldEditException e) {
             plugin.getLogger().severe("Failed to paste schematic for arena " + arenaId + ": " + e.getMessage());
         }
+    }
+    
+    /**
+     * Save arena info to arenas.yml.
+     */
+    private void saveArenaInfo(Arena arena) {
+        String path = "arenas." + arena.getId();
+        
+        arenaDataConfig.set(path + ".id", arena.getId());
+        arenaDataConfig.set(path + ".offset-x", arena.getOffsetX());
+        arenaDataConfig.set(path + ".in-use", arena.isInUse());
+        
+        // Spawn 1
+        if (arena.getSpawn1() != null) {
+            arenaDataConfig.set(path + ".spawn1.x", arena.getSpawn1().getX());
+            arenaDataConfig.set(path + ".spawn1.y", arena.getSpawn1().getY());
+            arenaDataConfig.set(path + ".spawn1.z", arena.getSpawn1().getZ());
+            arenaDataConfig.set(path + ".spawn1.yaw", arena.getSpawn1().getYaw());
+            arenaDataConfig.set(path + ".spawn1.pitch", arena.getSpawn1().getPitch());
+        }
+        
+        // Spawn 2
+        if (arena.getSpawn2() != null) {
+            arenaDataConfig.set(path + ".spawn2.x", arena.getSpawn2().getX());
+            arenaDataConfig.set(path + ".spawn2.y", arena.getSpawn2().getY());
+            arenaDataConfig.set(path + ".spawn2.z", arena.getSpawn2().getZ());
+            arenaDataConfig.set(path + ".spawn2.yaw", arena.getSpawn2().getYaw());
+            arenaDataConfig.set(path + ".spawn2.pitch", arena.getSpawn2().getPitch());
+        }
+        
+        // Bounds (calculated from offset and schematic dimensions)
+        arenaDataConfig.set(path + ".bounds.min-x", arena.getOffsetX());
+        arenaDataConfig.set(path + ".bounds.max-x", arena.getOffsetX() + schematicWidth);
+        arenaDataConfig.set(path + ".bounds.min-y", 0);
+        arenaDataConfig.set(path + ".bounds.max-y", schematicHeight);
+        arenaDataConfig.set(path + ".bounds.min-z", 0);
+        arenaDataConfig.set(path + ".bounds.max-z", schematicDepth);
+        
+        saveArenaData();
+    }
+    
+    /**
+     * Update arena in-use status in arenas.yml.
+     */
+    public void updateArenaStatus(int arenaId, boolean inUse) {
+        String path = "arenas." + arenaId + ".in-use";
+        arenaDataConfig.set(path, inUse);
+        saveArenaData();
     }
     
     /**
@@ -405,6 +630,7 @@ public class ArenaManager {
         if (arena != null) {
             arena.setInUse(true);
             playerArenaMap.put(player.getUniqueId(), arenaId);
+            updateArenaStatus(arenaId, true);
         }
     }
     
@@ -418,6 +644,9 @@ public class ArenaManager {
             
             // Reset the arena
             resetArena(arenaId);
+            
+            // Update status in file
+            updateArenaStatus(arenaId, false);
         }
     }
     
@@ -503,6 +732,7 @@ public class ArenaManager {
             Arena arena = arenas.get(arenaId);
             if (arena != null) {
                 arena.setInUse(false);
+                updateArenaStatus(arenaId, false);
             }
         }
     }
