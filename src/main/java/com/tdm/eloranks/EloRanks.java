@@ -9,6 +9,7 @@ import com.tdm.eloranks.listeners.PlayerDeathListener;
 import com.tdm.eloranks.listeners.BlockBreakListener;
 import com.tdm.eloranks.listeners.PlayerQuitListener;
 import com.tdm.eloranks.listeners.EntityDamageListener;
+import com.tdm.eloranks.listeners.PlayerRespawnListener;
 import com.tdm.eloranks.manager.EloManager;
 import com.tdm.eloranks.manager.DuelManager;
 import com.tdm.eloranks.manager.ArenaManager;
@@ -83,6 +84,7 @@ public final class EloRanks extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
         getServer().getPluginManager().registerEvents(new EntityDamageListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerRespawnListener(this), this);
 
         getLogger().info("╔══════════════════════════════════════╗");
         getLogger().info("║  ✅ EloRanks Enabled Successfully!  ║");
