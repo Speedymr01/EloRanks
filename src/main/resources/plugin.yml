@@ -6,7 +6,7 @@ author: TDM
 description: Competitive 1v1 Elo-Based Ranking System for Minecraft 1.21 servers with matchmaking, arenas, and dynamic K-factor
 
 commands:
-  elo:
+  er:
     description: View your Elo stats and rank
     usage: /<command> [stats|top|help] [player]
   duel:
