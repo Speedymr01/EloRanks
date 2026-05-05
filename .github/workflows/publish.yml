@@ -81,7 +81,7 @@ jobs:
 
       - name: Find JAR file
         id: findjar
-        run: echo "jar=$(ls plugin/*.jar)" >> $GITHUB_OUTPUT
+        run: echo "jar=$(basename plugin/*.jar)" >> $GITHUB_OUTPUT
 
       - name: Delete existing release (if any)
         uses: dev-drprasad/delete-tag-and-release@v1.0
@@ -96,4 +96,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           files: |
-            ${{ steps.findjar.outputs.jar }}
+            plugin/${{ steps.findjar.outputs.jar }}
