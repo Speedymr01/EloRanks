@@ -1,6 +1,7 @@
 package com.tdm.eloranks;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bstats.bukkit.Metrics;
 import com.tdm.eloranks.commands.EloCommand;
 import com.tdm.eloranks.commands.DuelCommand;
 import com.tdm.eloranks.commands.LeaderboardCommand;
@@ -66,6 +67,9 @@ public final class EloRanks extends JavaPlugin {
         countdownManager = new CountdownManager(this);
         
         getLogger().info("[7/7] Registering commands & listeners...");
+        
+        // Initialize bStats
+        initbStats();
         
         // Register commands
         getCommand("er").setExecutor(new EloCommand(this));
@@ -134,5 +138,12 @@ public final class EloRanks extends JavaPlugin {
     
     public CountdownManager getCountdownManager() {
         return countdownManager;
+    }
+
+    private void initbStats() {
+        // bStats tracks server count and player count automatically
+        new Metrics(this, 31122);
+        
+        getLogger().info("  bStats enabled!");
     }
 }
