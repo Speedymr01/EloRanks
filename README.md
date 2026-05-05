@@ -250,7 +250,7 @@ debug:
 ## Installation
 
 1. Install **FastAsyncWorldEdit** on your server
-2. Place `EloRanks-1.0.1.jar` in your `plugins` folder
+2. Place `EloRanks-2.0.0.jar` in your `plugins` folder
 3. Restart or reload the server
 4. Configure `config.yml` as needed
 5. Add your arena schematic to `plugins/EloRanks/arenas/`
