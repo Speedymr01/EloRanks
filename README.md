@@ -13,6 +13,7 @@ A competitive 1v1 Elo-based ranking system for Minecraft 1.21 servers with match
 - **Scoreboard & Bossbar**: Real-time rank, Elo, and opponent health display
 - **Ranked Nametags**: Color-coded rank prefixes on nametags (#1-50)
 - **Detailed Config**: Highly customizable with extensive options
+- **Auto Update Checker**: Notifies server owners when a new version is available on Modrinth
 
 ## Commands
 
@@ -250,7 +251,7 @@ debug:
 ## Installation
 
 1. Install **FastAsyncWorldEdit** on your server
-2. Place `EloRanks-2.0.0.jar` in your `plugins` folder
+2. Place `EloRanks-2.1.0.jar` in your `plugins` folder
 3. Restart or reload the server
 4. Configure `config.yml` as needed
 5. Add your arena schematic to `plugins/EloRanks/arenas/`
@@ -311,3 +312,21 @@ The built JAR will be in `target/EloRanks-{version}.jar`
 ## License
 
 MIT License
+
+## Changelog
+
+### v2.1.0
+- Added automatic Modrinth update checker - notifies server owners when a new version is available
+
+### v2.0.1
+- Minor bug fixes and improvements
+
+### v2.0.0
+- Initial release with full Elo ranking system
+- Matchmaking queue
+- Auto-arena loading with FAWE
+- 1v1 duels with UHC-style kits
+- Dynamic K-factor based on games played and Elo rating
+- Placement matches for new players
+- Surrender feature
+- Scoreboard and bossbar display

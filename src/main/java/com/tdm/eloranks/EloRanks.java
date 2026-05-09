@@ -17,6 +17,7 @@ import com.tdm.eloranks.manager.ArenaManager;
 import com.tdm.eloranks.manager.ScoreboardManager;
 import com.tdm.eloranks.manager.CountdownManager;
 import com.tdm.eloranks.config.ConfigManager;
+import com.tdm.eloranks.util.UpdateChecker;
 
 /**
  * EloRanks - Competitive 1v1 Elo-Based Ranking System
@@ -41,6 +42,9 @@ public final class EloRanks extends JavaPlugin {
         getLogger().info("╔══════════════════════════════════════╗");
         getLogger().info("║       EloRanks Loading...              ║");
         getLogger().info("╚══════════════════════════════════════╝");
+        
+        // Check for updates asynchronously
+        new UpdateChecker(this, "KZHk8AqA").check();
         
         // Initialize managers
         getLogger().info("[1/5] Loading config...");
