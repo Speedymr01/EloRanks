@@ -330,3 +330,7 @@ MIT License
 - Placement matches for new players
 - Surrender feature
 - Scoreboard and bossbar display
+
+
+[![bStats](https://img.shields.io/bstats/servers/31122?label=Servers&color=blue)](https://bstats.org/plugin/bukkit/YourPluginName/31122)
+[![bStats](https://img.shields.io/bstats/players/31122?label=Players&color=green)](https://bstats.org/plugin/bukkit/YourPluginName/31122)
